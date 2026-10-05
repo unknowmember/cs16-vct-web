@@ -3,18 +3,12 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
-const path = require('path');
-const fs = require('fs');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.static('public'));
 
-// Phục vụ file tĩnh từ cả thư mục gốc lẫn thư mục public
-app.use(express.static(__dirname));
-app.use(express.static(path.join(__dirname, 'public')));
-
-// KẾT NỐI MONGODB
 const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://admin:XxyYZzz1243123@cluster0.brqqwja.mongodb.net/?appName=Cluster0";
 
 mongoose.connect(MONGO_URI)
@@ -44,26 +38,19 @@ const Match = mongoose.model('Match', MatchSchema);
 const MAP_POOL = ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"];
 
 async function initAdmin() {
-    try {
-        const adminExists = await User.findOne({ username: 'admin' });
-        if (!adminExists) {
-            await User.create({
-                id: 'ADMIN_001', username: 'admin',
-                password: bcrypt.hashSync('Hoangh@171112', 10),
-                role: 'ADMIN', teamId: null,
-                token: crypto.randomBytes(10).toString('hex').toUpperCase()
-            });
-            console.log("Khoi tao Tai khoan Admin mac dinh thanh cong!");
-        }
-    } catch (err) {
-        console.error("Loi khoi tao Admin:", err.message);
+    const adminExists = await User.findOne({ username: 'admin' });
+    if (!adminExists) {
+        await User.create({
+            id: 'ADMIN_001', username: 'admin',
+            password: bcrypt.hashSync('Hoangh@171112', 10),
+            role: 'ADMIN', teamId: null,
+            token: crypto.randomBytes(10).toString('hex').toUpperCase()
+        });
     }
 }
 initAdmin();
 
-// =========================================================================
-// 1. AUTHENTICATION (ĐĂNG NHẬP / ĐĂNG KÝ)
-// =========================================================================
+// AUTH
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
     if (await User.findOne({ username })) return res.status(400).json({ error: "Tài khoản đã tồn tại!" });
@@ -86,9 +73,7 @@ app.post('/api/login', async (req, res) => {
     res.json({ success: true, user: { id: user.id, username: user.username, role: user.role, token: user.token, teamId: user.teamId } });
 });
 
-// =========================================================================
-// 2. TEAMS (QUẢN LÝ ĐỘI TUYỂN)
-// =========================================================================
+// TEAMS
 app.get('/api/teams', async (req, res) => {
     const teams = await Team.find();
     const users = await User.find();
@@ -132,9 +117,7 @@ app.post('/api/team/join', async (req, res) => {
     res.json({ success: true, team });
 });
 
-// =========================================================================
-// 3. MATCH & DASHBOARD
-// =========================================================================
+// MATCH & DASHBOARD
 app.get('/api/dashboard', async (req, res) => {
     const matches = await Match.find();
     const teams = await Team.find();
@@ -181,16 +164,14 @@ app.post('/api/admin/start-match', async (req, res) => {
     res.json({ success: true, match });
 });
 
-// =========================================================================
-// 4. PICK / BAN MAP LOGIC (CHECK ĐỘI TRƯỜNG CHẶT CHẼ)
-// =========================================================================
+// CHECK ĐỘI TRƯỞNG KHI PICK MAP 1
 app.post('/api/match/pick-map1', async (req, res) => {
     const { userId, matchId, map1, sideA1 } = req.body;
     const user = await User.findOne({ id: userId });
     const match = await Match.findOne({ id: matchId });
-    const teamA = await Team.findOne({ id: match?.teamA?.id });
+    const teamA = await Team.findOne({ id: match.teamA.id });
 
-    if (!user || !teamA) return res.status(403).json({ error: "Lỗi người dùng hoặc không tìm thấy thông tin Đội A!" });
+    if (!user || !teamA) return res.status(403).json({ error: "Lỗi người dùng!" });
     if (teamA.leaderId !== user.id) return res.status(403).json({ error: "Chỉ ĐỘI TRƯỞNG của Team A mới có quyền Pick Map!" });
     if (match.status !== 'PICKING_MAP1') return res.status(400).json({ error: "Chưa tới lượt chọn Map 1!" });
 
@@ -203,17 +184,18 @@ app.post('/api/match/pick-map1', async (req, res) => {
     res.json({ success: true, match });
 });
 
+// CHECK ĐỘI TRƯỞNG KHI PICK MAP 2
 app.post('/api/match/pick-map2', async (req, res) => {
     const { userId, matchId, map2, sideB2 } = req.body;
     const user = await User.findOne({ id: userId });
     const match = await Match.findOne({ id: matchId });
-    const teamB = await Team.findOne({ id: match?.teamB?.id });
+    const teamB = await Team.findOne({ id: match.teamB.id });
 
-    if (!user || !teamB) return res.status(403).json({ error: "Lỗi người dùng hoặc không tìm thấy thông tin Đội B!" });
+    if (!user || !teamB) return res.status(403).json({ error: "Lỗi người dùng!" });
     if (teamB.leaderId !== user.id) return res.status(403).json({ error: "Chỉ ĐỘI TRƯỞNG của Team B mới có quyền Pick Map!" });
     if (match.status !== 'PICKING_MAP2') return res.status(400).json({ error: "Chưa tới lượt chọn Map 2!" });
 
-    const map1Name = match.bo3Maps[0]?.name;
+    const map1Name = match.bo3Maps[0].name;
     if (map1Name === map2) return res.status(400).json({ error: "Map 2 không được trùng với Map 1!" });
 
     const map2Info = {
@@ -236,36 +218,5 @@ app.post('/api/match/pick-map2', async (req, res) => {
     res.json({ success: true, match });
 });
 
-// =========================================================================
-// 5. PHỤC VỤ TRANG INDEX.HTML (TỰ ĐỘNG DÒ VỊ TRÍ FILE TRÊN LINUX/RENDER)
-// =========================================================================
-app.get('*', (req, res) => {
-    const possiblePaths = [
-        path.join(__dirname, 'index.html'),
-        path.join(__dirname, 'Index.html'),
-        path.join(__dirname, 'public', 'index.html'),
-        path.join(__dirname, 'public', 'Index.html'),
-        path.join(__dirname, 'src', 'index.html')
-    ];
-
-    const foundPath = possiblePaths.find(p => fs.existsSync(p));
-
-    if (foundPath) {
-        res.sendFile(foundPath);
-    } else {
-        res.status(404).send(`
-            <div style="font-family: sans-serif; padding: 40px; text-align: center; color: #333;">
-                <h2>❌ Không tìm thấy file index.html!</h2>
-                <p>Hãy kiểm tra lại xem file <b>index.html</b> đã nằm trong kho GitHub chưa.</p>
-            </div>
-        `);
-    }
-});
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`====================================================`);
-    console.log(` VCT BO3 Server running on port ${PORT}`);
-    console.log(` MongoDB: Connected`);
-    console.log(`====================================================`);
-});
+app.listen(PORT, () => console.log(`VCT BO3 Server running on port ${PORT}`));
