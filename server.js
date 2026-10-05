@@ -12,7 +12,7 @@ app.use(express.static('public'));
 const db = {
     users: [],       // { id, username, password, role, teamId, token }
     teams: [],       // { id, name, password, members: [], wins: 0, isEliminated: false }
-    matches: [],     // { id, teamA, teamB, bannedMaps: [], pickedMapA, pickedMapB, deciderMap, sideA, status, scoreA, scoreB }
+    matches: [],     // { id, round, teamA, teamB, pickedMap, pickType, sideA, status, scoreA, scoreB }
     mapPool: ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"]
 };
 
@@ -34,7 +34,7 @@ function generateToken() {
 // --- AUTH APIs ---
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: "Thiếu thông tin đăng ký!" });
+    if (!username || !password) return res.status(400).json({ error: "Thiếu thông tin!" });
     if (db.users.find(u => u.username === username)) {
         return res.status(400).json({ error: "Tài khoản đã tồn tại!" });
     }
@@ -50,10 +50,7 @@ app.post('/api/register', async (req, res) => {
     };
     
     db.users.push(user);
-    res.json({
-        success: true,
-        user: { id: user.id, username: user.username, role: user.role, token: user.token, teamId: null }
-    });
+    res.json({ success: true, user: { id: user.id, username: user.username, role: user.role, token: user.token, teamId: null } });
 });
 
 app.post('/api/login', async (req, res) => {
@@ -62,10 +59,7 @@ app.post('/api/login', async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(400).json({ error: "Sai tài khoản hoặc mật khẩu!" });
     }
-    res.json({
-        success: true,
-        user: { id: user.id, username: user.username, role: user.role || 'USER', token: user.token, teamId: user.teamId }
-    });
+    res.json({ success: true, user: { id: user.id, username: user.username, role: user.role || 'USER', token: user.token, teamId: user.teamId } });
 });
 
 // --- TEAM APIs ---
@@ -89,9 +83,7 @@ app.get('/api/teams', (req, res) => {
 app.post('/api/team/create', async (req, res) => {
     const { userId, teamName, teamPassword } = req.body;
     const user = db.users.find(u => u.id === userId);
-    if (!user) return res.status(400).json({ error: "User không tồn tại!" });
-    if (user.teamId) return res.status(400).json({ error: "Bạn đã thuộc một team khác!" });
-    if (!teamName || !teamPassword) return res.status(400).json({ error: "Nhập thiếu tên hoặc mật khẩu Team!" });
+    if (!user || user.teamId) return res.status(400).json({ error: "Thao tác không hợp lệ hoặc đã có team!" });
 
     const hashedPassword = await bcrypt.hash(teamPassword, 10);
     const team = {
@@ -111,12 +103,9 @@ app.post('/api/team/create', async (req, res) => {
 app.post('/api/team/join', async (req, res) => {
     const { userId, teamName, teamPassword } = req.body;
     const user = db.users.find(u => u.id === userId);
-    if (!user) return res.status(400).json({ error: "User không tồn tại!" });
-    
     const team = db.teams.find(t => t.name === teamName);
-    if (!team) return res.status(400).json({ error: "Không tìm thấy Team!" });
-    if (!(await bcrypt.compare(teamPassword, team.password))) {
-        return res.status(400).json({ error: "Sai mật khẩu Team!" });
+    if (!user || !team || !(await bcrypt.compare(teamPassword, team.password))) {
+        return res.status(400).json({ error: "Thông tin gia nhập Team không đúng!" });
     }
 
     user.teamId = team.id;
@@ -133,16 +122,12 @@ app.post('/api/admin/delete-team', (req, res) => {
     }
 
     db.teams = db.teams.filter(t => t.id !== teamId);
-    db.users.forEach(u => {
-        if (u.teamId === teamId) {
-            u.teamId = null;
-        }
-    });
+    db.users.forEach(u => { if (u.teamId === teamId) u.teamId = null; });
 
     res.json({ success: true, message: 'Đã giải tán team thành công!' });
 });
 
-// --- DASHBOARD & ADMIN TOURNAMENT APIs ---
+// --- DASHBOARD & BRACKET SETUP APIs ---
 app.get('/api/dashboard', (req, res) => {
     res.json({
         teams: db.teams.map(t => ({ id: t.id, name: t.name, memberCount: t.members.length })),
@@ -150,61 +135,61 @@ app.get('/api/dashboard', (req, res) => {
     });
 });
 
-app.post('/api/admin/start-tournament', (req, res) => {
-    const { userId } = req.body;
+// Admin xếp cặp đấu Vòng 1
+app.post('/api/admin/setup-bracket', (req, res) => {
+    const { userId, pairings } = req.body;
     const user = db.users.find(u => u.id === userId);
+
     if (!user || user.role !== 'ADMIN') {
-        return res.status(403).json({ error: "Chỉ ADMIN mới có quyền khởi tạo giải đấu!" });
+        return res.status(403).json({ error: 'Chỉ Admin mới có quyền xếp cặp đấu!' });
     }
 
-    if (db.teams.length < 2) return res.status(400).json({ error: "Cần tối thiểu 2 Team để bắt đầu!" });
+    db.matches = pairings.map((pair, idx) => {
+        const teamA = db.teams.find(t => t.id === pair.teamAId) || { id: 'BYE_A', name: 'Miễn đấu (BYE)' };
+        const teamB = db.teams.find(t => t.id === pair.teamBId) || { id: 'BYE_B', name: 'Miễn đấu (BYE)' };
 
-    db.matches = [];
-    for (let i = 0; i < db.teams.length; i += 2) {
-        if (i + 1 < db.teams.length) {
-            db.matches.push({
-                id: 'MATCH_' + (Math.floor(i / 2) + 1),
-                teamA: db.teams[i],
-                teamB: db.teams[i + 1],
-                bannedMaps: [],
-                pickedMapA: null,
-                pickedMapB: null,
-                deciderMap: null,
-                sideA: 'CT',
-                status: 'PICKING',
-                scoreA: 0,
-                scoreB: 0
-            });
-        }
-    }
+        return {
+            id: `M1_R${idx + 1}`,
+            round: 1,
+            teamA,
+            teamB,
+            pickedMap: null,
+            pickType: null,   // 'PICK' hoặc 'DECIDER'
+            sideA: 'CT',       // 'CT' hoặc 'TERRORIST'
+            status: 'PENDING', // 'PENDING', 'READY', 'FINISHED'
+            scoreA: 0,
+            scoreB: 0
+        };
+    });
+
     res.json({ success: true, matches: db.matches });
 });
 
-app.post('/api/match/pickban', (req, res) => {
-    const { matchId, action, mapName, side } = req.body;
+// Pick Map & Chọn Phe / Random Phe
+app.post('/api/match/select-map', (req, res) => {
+    const { matchId, mapName, pickType, chosenSideA } = req.body; 
+    // pickType: 'PICK' hoặc 'DECIDER'
+    // chosenSideA: 'CT' hoặc 'TERRORIST' (Nếu là PICK)
+
     const match = db.matches.find(m => m.id === matchId);
-    if (!match) return res.status(404).json({ error: "Trận đấu không tồn tại!" });
+    if (!match) return res.status(404).json({ error: "Không tìm thấy trận đấu!" });
 
-    if (action === 'ban' && !match.bannedMaps.includes(mapName)) {
-        match.bannedMaps.push(mapName);
-    } else if (action === 'pickA') {
-        match.pickedMapA = mapName;
-    } else if (action === 'pickB') {
-        match.pickedMapB = mapName;
-    } else if (action === 'sideA') {
-        match.sideA = side;
+    match.pickedMap = mapName;
+    match.pickType = pickType;
+
+    if (pickType === 'PICK') {
+        // Nếu là Map Pick -> Dùng phe xuất phát do người chọn quyết định
+        match.sideA = chosenSideA || 'CT';
+    } else if (pickType === 'DECIDER') {
+        // Nếu là Map Decider -> Random ngẫu nhiên phe xuất phát
+        match.sideA = Math.random() < 0.5 ? 'CT' : 'TERRORIST';
     }
 
-    const remaining = db.mapPool.filter(m => !match.bannedMaps.includes(m) && m !== match.pickedMapA && m !== match.pickedMapB);
-    if (remaining.length === 1) {
-        match.deciderMap = remaining[0];
-        match.status = 'READY';
-    }
-
+    match.status = 'READY';
     res.json({ success: true, match });
 });
 
-// --- CS 1.6 VERIFICATION API ---
+// --- CS 1.6 VERIFICATION API (Giữ nguyên phân chia Team cho Server Game) ---
 app.get('/api/cs16/verify-player', (req, res) => {
     const { token } = req.query;
     const user = db.users.find(u => u.token === token);
@@ -213,21 +198,44 @@ app.get('/api/cs16/verify-player', (req, res) => {
     const team = db.teams.find(t => t.id === user.teamId);
     const activeMatch = db.matches.find(m => 
         (m.teamA.id === user.teamId || m.teamB.id === user.teamId) && 
-        (m.status === 'READY' || m.status === 'PICKING')
+        (m.status === 'READY' || m.status === 'PENDING')
     );
+
+    if (!activeMatch) {
+        return res.json({
+            success: true,
+            username: user.username,
+            role: user.role || 'USER',
+            teamName: team ? team.name : "Chưa có team",
+            isPlaying: false
+        });
+    }
+
+    const isTeamA = activeMatch.teamA.id === user.teamId;
+    
+    // Tính toán phe xuất phát chính xác từng người chơi
+    // Nếu SideA là 'CT' -> Team A đóng vai CT, Team B đóng vai TERRORIST (và ngược lại)
+    const playerSide = isTeamA ? activeMatch.sideA : (activeMatch.sideA === 'CT' ? 'TERRORIST' : 'CT');
+
+    // Lấy toàn bộ danh sách tài khoản thuộc Team A và Team B để Server CS 1.6 chia đội chính xác
+    const teamAMembers = db.users.filter(u => u.teamId === activeMatch.teamA.id).map(u => u.username);
+    const teamBMembers = db.users.filter(u => u.teamId === activeMatch.teamB.id).map(u => u.username);
 
     res.json({
         success: true,
         username: user.username,
         role: user.role || 'USER',
+        teamId: user.teamId,
         teamName: team ? team.name : "Chưa có team",
-        isPlaying: !!activeMatch,
-        matchInfo: activeMatch ? {
+        isPlaying: true,
+        matchInfo: {
             matchId: activeMatch.id,
-            map: activeMatch.pickedMapA || activeMatch.deciderMap || "de_dust2",
-            isTeamA: activeMatch.teamA.id === user.teamId,
-            sideA: activeMatch.sideA
-        } : null
+            map: activeMatch.pickedMap || "de_dust2",
+            pickType: activeMatch.pickType,
+            assignedSide: playerSide, // 'CT' hoặc 'TERRORIST' cho đúng người dùng này
+            teamA: { id: activeMatch.teamA.id, name: activeMatch.teamA.name, members: teamAMembers, startSide: activeMatch.sideA },
+            teamB: { id: activeMatch.teamB.id, name: activeMatch.teamB.name, members: teamBMembers, startSide: activeMatch.sideA === 'CT' ? 'TERRORIST' : 'CT' }
+        }
     });
 });
 
