@@ -1,797 +1,125 @@
 <!DOCTYPE html>
-<html lang="vi" class="dark">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VCT CS 1.6 Esports Hub</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&family=Teko:wght@600;700&family=Titillium+Web:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Titillium Web', 'sans-serif'],
-                        teko: ['Teko', 'sans-serif'],
-                        orbitron: ['Orbitron', 'sans-serif'],
-                        rajdhani: ['Rajdhani', 'sans-serif'],
-                    },
-                    colors: {
-                        vct: {
-                            red: '#FF4655',
-                            'red-dark': '#CE3A47',
-                            dark: '#0F1923',
-                            panel: '#111C25',
-                            card: '#182531',
-                            cyan: '#00F2FE',
-                            gold: '#FFB800'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
+    <title>VCT Bracket & CS 1.6 Live HUD Stream</title>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-        body {
-            background-color: #080C12;
-            background-image: 
-                radial-gradient(circle at 50% 0%, rgba(255, 70, 85, 0.12) 0%, transparent 60%),
-                radial-gradient(circle at 100% 100%, rgba(0, 242, 254, 0.05) 0%, transparent 50%),
-                linear-gradient(to bottom, rgba(8, 12, 18, 0.8), rgba(8, 12, 18, 0.95)),
-                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.015) 2px, rgba(255, 255, 255, 0.015) 4px);
-            background-attachment: fixed;
-            color: #E2E8F0;
-        }
+        body { background-color: #0f1923; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1, h2 { color: #ff4655; text-transform: uppercase; letter-spacing: 2px; }
+        
+        /* BRACKET STYLES */
+        .bracket-container { display: flex; gap: 40px; align-items: center; margin-bottom: 40px; background: #1f2326; padding: 20px; border-radius: 8px; }
+        .match-card { background: #111417; border: 1px solid #36393e; border-left: 4px solid #ff4655; border-radius: 6px; padding: 12px; width: 220px; margin-bottom: 15px; }
+        .match-card.final { border-left-color: #00f0ff; }
+        .team-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #222; }
+        .team-name { font-weight: bold; }
+        .score { color: #ff4655; font-weight: bold; }
 
-        .vct-glass {
-            background: rgba(15, 25, 35, 0.75);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-        }
-
-        .vct-glass-glow {
-            box-shadow: 0 0 30px rgba(255, 70, 85, 0.15), inset 0 0 15px rgba(255, 70, 85, 0.05);
-        }
-
-        /* VCT PROFESSIONAL BRACKET STYLING */
-        .vct-bracket-card {
-            width: 270px;
-            display: flex;
-            align-items: stretch;
-            background: #0B1219;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.7);
-            transition: all 0.25s ease;
-            position: relative;
-        }
-
-        .vct-bracket-card:hover {
-            border-color: rgba(0, 242, 254, 0.4);
-            transform: translateY(-2px);
-        }
-
-        .vct-bracket-card.active {
-            border-color: #FF4655;
-            box-shadow: 0 0 15px rgba(255, 70, 85, 0.3);
-        }
-
-        .vct-match-tag {
-            background: #00F2FE;
-            color: #080C12;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 900;
-            font-size: 11px;
-            width: 38px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            letter-spacing: -0.5px;
-            writing-mode: horizontal-tb;
-        }
-
-        .vct-bracket-card.active .vct-match-tag {
-            background: #FF4655;
-            color: #FFFFFF;
-        }
-
-        .bracket-tree-container {
-            display: flex;
-            align-items: center;
-            gap: 3.5rem;
-            padding: 2rem 1rem;
-        }
-
-        .bracket-column {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
-            gap: 2rem;
-            min-width: 270px;
-        }
-
-        .vct-input {
-            background: rgba(10, 16, 23, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #FFFFFF;
-            transition: all 0.2s ease;
-        }
-
-        .vct-input:focus {
-            border-color: #FF4655;
-            box-shadow: 0 0 12px rgba(255, 70, 85, 0.3);
-            outline: none;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #080C12;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1E293B;
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #FF4655;
-        }
+        /* LIVE HUD STYLES */
+        .live-hud { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; background: #181c25; padding: 20px; border-radius: 8px; border: 1px solid #00f0ff; }
+        .scoreboard { font-size: 28px; text-align: center; background: #000; padding: 15px; border-radius: 6px; color: #00f0ff; margin-bottom: 20px; }
+        .killfeed { background: #0d0f12; padding: 10px; height: 250px; overflow-y: auto; border-radius: 6px; border: 1px solid #2a2e3d; }
+        .kill-item { padding: 6px; border-bottom: 1px solid #222; font-size: 14px; }
+        .kill-item .killer { color: #ff4655; font-weight: bold; }
+        .kill-item .victim { color: #00f0ff; }
+        .kill-item .headshot { color: #ffff00; font-size: 11px; margin-left: 5px; }
+        .player-row { display: flex; justify-content: space-between; padding: 8px; background: #222733; margin-bottom: 5px; border-radius: 4px; }
+        .hp-bar { color: #4caf50; font-weight: bold; }
     </style>
 </head>
-<body class="min-h-screen p-3 md:p-8 font-sans antialiased selection:bg-vct-red selection:text-white">
+<body>
+
+<div class="container">
+    <h1>VCT Tournament Bracket</h1>
     
-    <div class="max-w-7xl mx-auto space-y-6">
-
-        <!-- HEADER -->
-        <header class="vct-glass p-4 md:p-6 rounded-2xl border-b-2 border-vct-red/80 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="absolute -right-10 -top-10 w-48 h-48 bg-vct-red/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -left-10 -bottom-10 w-48 h-48 bg-vct-cyan/10 rounded-full blur-3xl pointer-events-none"></div>
-
-            <div class="flex items-center gap-4 z-10">
-                <div class="relative group">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-vct-red to-vct-cyan rounded-lg blur opacity-70 group-hover:opacity-100 transition duration-300"></div>
-                    <div class="relative bg-vct-dark text-vct-red font-orbitron font-black text-2xl md:text-3xl px-4 py-1.5 rounded-lg border border-vct-red/50 tracking-widest flex items-center gap-2">
-                        <span>VCT</span>
-                        <span class="w-2 h-2 rounded-full bg-vct-red animate-ping"></span>
-                    </div>
-                </div>
-                <div>
-                    <h1 class="text-xl md:text-2xl font-orbitron font-extrabold tracking-wider uppercase text-white flex items-center gap-2">
-                        CS 1.6 <span class="text-vct-red">VALORANT HUD</span>
-                    </h1>
-                    <div class="flex items-center gap-2 mt-0.5">
-                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-                        <p id="userStatus" class="text-xs text-slate-300 font-rajdhani font-semibold tracking-wide">Chưa đăng nhập</p>
-                    </div>
-                </div>
+    <!-- BRACKET DISPLAY -->
+    <div class="bracket-container">
+        <div>
+            <h3>VÒNG 1 (ROUND 1)</h3>
+            <div class="match-card">
+                <div>M1 - FINISHED</div>
+                <div class="team-row"><span class="team-name">BYE (Đã xóa)</span> <span class="score">0</span></div>
+                <div class="team-row"><span class="team-name">test2</span> <span class="score">2</span></div>
             </div>
-            
-            <div class="flex items-center gap-3 z-10 w-full sm:w-auto justify-end">
-                <div id="tokenCard" class="hidden bg-slate-950/80 border border-slate-800 px-4 py-2 rounded-xl text-right backdrop-blur-md">
-                    <span class="text-[9px] text-slate-400 uppercase tracking-widest block font-orbitron">PLAYER TOKEN</span>
-                    <span id="tokenDisplay" class="font-mono text-vct-gold font-bold text-xs md:text-sm tracking-wider"></span>
-                </div>
-
-                <button id="logoutBtn" onclick="logout()" class="hidden bg-vct-red/10 hover:bg-vct-red border border-vct-red/50 hover:border-vct-red text-vct-red hover:text-white text-xs font-orbitron font-bold px-4 py-2.5 rounded-xl uppercase transition duration-200 shadow-lg hover:shadow-vct-red/30">
-                    Đăng Xuất
-                </button>
-            </div>
-        </header>
-
-        <!-- SEC 1: AUTH -->
-        <div id="secAuth" class="max-w-md mx-auto vct-glass vct-glass-glow p-8 rounded-2xl border border-slate-800/80 space-y-6 relative overflow-hidden">
-            <div class="text-center space-y-2">
-                <div class="inline-block p-3 rounded-full bg-vct-red/10 text-vct-red mb-1">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
-                </div>
-                <h2 class="text-2xl font-orbitron font-black text-white uppercase tracking-wider">ĐĂNG NHẬP / ĐĂNG KÝ</h2>
-                <p class="text-xs text-slate-400 font-sans">Truy cập hệ thống điều hành giải đấu VCT CS 1.6</p>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-orbitron font-semibold text-slate-300 uppercase mb-1.5 tracking-wider">Tài khoản</label>
-                    <input id="authUsername" type="text" placeholder="Nhập tên tài khoản..." class="w-full vct-input px-4 py-3 rounded-xl text-sm transition">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-orbitron font-semibold text-slate-300 uppercase mb-1.5 tracking-wider">Mật khẩu</label>
-                    <input id="authPassword" type="password" placeholder="Nhập mật khẩu..." class="w-full vct-input px-4 py-3 rounded-xl text-sm transition">
-                </div>
-
-                <div class="flex gap-3 pt-2">
-                    <button onclick="login()" class="flex-1 bg-gradient-to-r from-vct-red to-vct-red-dark hover:brightness-110 text-white font-orbitron font-bold py-3 rounded-xl text-sm tracking-wider uppercase shadow-lg shadow-vct-red/25 transition">
-                        ĐĂNG NHẬP
-                    </button>
-                    <button onclick="register()" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-orbitron font-bold py-3 rounded-xl text-sm tracking-wider uppercase transition">
-                        ĐĂNG KÝ
-                    </button>
-                </div>
+            <div class="match-card">
+                <div>M2 - FINISHED</div>
+                <div class="team-row"><span class="team-name">BYE (Đã xóa)</span> <span class="score">0</span></div>
+                <div class="team-row"><span class="team-name">test4</span> <span class="score">2</span></div>
             </div>
         </div>
 
-        <!-- SEC 2: TEAM SETUP -->
-        <div id="secTeam" class="hidden max-w-md mx-auto vct-glass p-8 rounded-2xl border border-vct-gold/30 space-y-6">
-            <div class="text-center space-y-2">
-                <div class="inline-block p-3 rounded-full bg-vct-gold/10 text-vct-gold mb-1">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                </div>
-                <h2 class="text-2xl font-orbitron font-black text-vct-gold uppercase tracking-wider">THIẾT LẬP ĐỘI HÌNH</h2>
-                <p class="text-xs text-slate-400">Tạo đội mới với tư cách Đội Trưởng hoặc tham gia đội có sẵn</p>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-orbitron font-semibold text-slate-300 uppercase mb-1.5 tracking-wider">Tên Team</label>
-                    <input id="teamName" type="text" placeholder="Ví dụ: Sentinels, Fnatic..." class="w-full vct-input px-4 py-3 rounded-xl text-sm">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-orbitron font-semibold text-slate-300 uppercase mb-1.5 tracking-wider">Mật khẩu Team</label>
-                    <input id="teamPass" type="password" placeholder="Mật khẩu bảo mật team..." class="w-full vct-input px-4 py-3 rounded-xl text-sm">
-                </div>
-
-                <div class="flex flex-col gap-2.5 pt-2">
-                    <button onclick="createTeam()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-orbitron font-bold py-3 rounded-xl text-sm tracking-wider uppercase shadow-lg shadow-emerald-600/20 transition">
-                        TẠO TEAM MỚI (Đội Trưởng)
-                    </button>
-                    <button onclick="joinTeam()" class="w-full bg-vct-gold/20 hover:bg-vct-gold/30 border border-vct-gold/50 text-vct-gold font-orbitron font-bold py-3 rounded-xl text-sm tracking-wider uppercase transition">
-                        GIA NHẬP TEAM CO-OP
-                    </button>
-                </div>
+        <div>
+            <h3>VÒNG CHUNG KẾT (FINAL)</h3>
+            <div class="match-card final">
+                <div style="color: #00f0ff;">M3 - CHUNG KẾT (FINAL)</div>
+                <div class="team-row"><span class="team-name" id="final-teamA">test2</span> <span class="score" id="final-scoreA">0</span></div>
+                <div class="team-row"><span class="team-name" id="final-teamB">test4</span> <span class="score" id="final-scoreB">0</span></div>
             </div>
         </div>
-
-        <!-- SEC 3: BRACKET HUD -->
-        <div id="secTournament" class="hidden vct-glass p-6 md:p-8 rounded-2xl border border-slate-800/80 space-y-6">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
-                <div class="flex items-center gap-3">
-                    <span class="w-3 h-3 bg-vct-red rounded-full animate-pulse shadow-lg shadow-vct-red"></span>
-                    <div>
-                        <h2 class="font-orbitron text-2xl font-black text-white tracking-wider uppercase">OFFICIAL VCT KNOCKOUT BRACKET</h2>
-                        <p class="text-xs text-slate-400 font-sans">Sơ đồ thi đấu loại trực tiếp & Map Veto System</p>
-                    </div>
-                </div>
-                <!-- Cấu hình Nút Admin: Mặc định ẩn, chỉ load khi đúng quyền Admin -->
-                <button id="adminSetupBtn" onclick="toggleAdminPanel()" class="hidden bg-vct-red hover:bg-vct-red-dark text-white text-xs font-orbitron font-extrabold px-4 py-2.5 rounded-xl uppercase tracking-wider transition shadow-lg shadow-vct-red/30">
-                    ⚙️ ADMIN: Xếp Cặp Đấu
-                </button>
-            </div>
-
-            <!-- ADMIN PANEL (CHỈ DÀNH CHO ADMIN) -->
-            <div id="adminPanel" class="hidden bg-slate-950/90 p-5 rounded-xl border border-vct-red/40 space-y-4 shadow-2xl backdrop-blur-md">
-                <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <span class="text-vct-gold">🛠️</span>
-                    <h3 class="text-sm font-orbitron font-extrabold text-vct-gold uppercase tracking-wider">Xếp Cặp Đấu Vòng 1 (Ban Tổ Chức)</h3>
-                </div>
-                <div id="pairingSlots" class="grid gap-3 max-h-80 overflow-y-auto pr-1"></div>
-                <button onclick="saveCustomBracket()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-xs font-orbitron font-extrabold uppercase tracking-widest shadow-lg shadow-emerald-600/30 transition">
-                    CHỐT SƠ ĐỒ & KHỞI TẠO TẢI TRẬN
-                </button>
-            </div>
-
-            <!-- SƠ ĐỒ DẠNG CÂY CHUẨN VCT -->
-            <div class="overflow-x-auto pb-4 pt-2">
-                <div class="bracket-tree-container min-w-[750px] justify-start md:justify-center">
-                    <div id="round1Col" class="bracket-column"></div>
-                    
-                    <div id="round2Col" class="bracket-column">
-                        <div class="vct-bracket-card p-0 flex border-dashed border-vct-cyan/40 bg-slate-950/40">
-                            <div class="vct-match-tag bg-vct-cyan/20 text-vct-cyan">FIN</div>
-                            <div class="p-4 flex-1 flex flex-col items-center justify-center gap-1">
-                                <span class="text-xs font-orbitron font-bold text-vct-cyan uppercase tracking-wider">CHUNG KẾT (FINAL)</span>
-                                <span class="text-[11px] font-mono text-slate-400">TBD (Chờ Đội Thắng Vòng 1)</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- SEC 4: MAP PICK BAN (HIỂN THỊ TRỰC QUAN CHO CẢ THÀNH VIÊN & ĐỘI TRƯỞNG) -->
-        <div id="secPickBan" class="hidden vct-glass p-6 md:p-8 rounded-2xl border-2 border-vct-gold/70 shadow-2xl space-y-5">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-vct-gold/30 pb-3">
-                <div class="flex items-center gap-3">
-                    <span class="p-2 rounded-lg bg-vct-gold/10 text-vct-gold font-bold">🎯</span>
-                    <div>
-                        <h2 class="font-orbitron text-2xl font-black text-vct-gold tracking-wider uppercase">MAP PICK & BAN VETO SYSTEM</h2>
-                        <p id="activeMatchNotice" class="text-xs text-slate-300 font-mono"></p>
-                    </div>
-                </div>
-                <span id="turnBadge" class="bg-vct-gold/20 text-vct-gold text-xs font-orbitron font-extrabold px-4 py-1.5 rounded-full border border-vct-gold/50 shadow-md">
-                    THÔNG TIN BAN/PICK MAP
-                </span>
-            </div>
-            
-            <div id="activePickCard" class="bg-slate-950/90 p-5 rounded-xl border border-slate-800 space-y-4"></div>
-        </div>
-
-        <!-- SEC 5: TEAMS LIST -->
-        <div id="secTeamList" class="hidden vct-glass p-6 md:p-8 rounded-2xl border border-slate-800/80 space-y-5">
-            <div class="flex items-center gap-3 border-b border-slate-800 pb-3">
-                <span class="text-vct-cyan text-xl">🛡️</span>
-                <h2 class="font-orbitron text-2xl font-black text-vct-cyan tracking-wider uppercase">DANH SÁCH ĐỘI THAM GIA GIẢI</h2>
-            </div>
-            <div id="teamsContainer" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        </div>
-
     </div>
 
-    <script>
-        let currentUser = JSON.parse(localStorage.getItem('vct_user')) || null;
-        let allTeams = [];
-        let activeMatchForUser = null;
-        const mapPool = ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"];
+    <!-- REALTIME CS 1.6 LIVE BROADCAST HUD -->
+    <h2>📡 CS 1.6 Live HUD Broadcast (Realtime Data)</h2>
+    <div class="live-hud">
+        <div>
+            <div class="scoreboard" id="live-score">TEAM A [ 0 ] - [ 0 ] TEAM B</div>
+            <h3>DANH SÁCH GAMER REALTIME</h3>
+            <div id="player-list">
+                <div class="player-row"><span>Đang chờ dữ liệu từ CS 1.6...</span></div>
+            </div>
+        </div>
 
-        function updateUIFlow() {
-            if (!currentUser) {
-                document.getElementById('secAuth').classList.remove('hidden');
-                document.getElementById('secTeam').classList.add('hidden');
-                document.getElementById('secTournament').classList.add('hidden');
-                document.getElementById('secPickBan').classList.add('hidden');
-                document.getElementById('secTeamList').classList.add('hidden');
-                document.getElementById('tokenCard').classList.add('hidden');
-                document.getElementById('logoutBtn').classList.add('hidden');
-                document.getElementById('userStatus').innerText = "Chưa đăng nhập";
-                return;
+        <div>
+            <h3>LIVE KILLFEED</h3>
+            <div class="killfeed" id="killfeed-box">
+                <div class="kill-item">Chưa có hạ gục nào...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+
+    // Nhận dữ liệu Realtime Killfeed & Thông số Player từ CS 1.6
+    socket.on('cs_live_update', (data) => {
+        if (data.scoreA !== undefined) {
+            document.getElementById('live-score').innerText = `TEAM A [ ${data.scoreA} ] - [ ${data.scoreB} ] TEAM B`;
+        }
+
+        if (data.type === 'KILL_EVENT') {
+            const feed = document.getElementById('killfeed-box');
+            const item = document.createElement('div');
+            item.className = 'kill-item';
+            item.innerHTML = `<span class="killer">${data.details.killer}</span> [${data.details.weapon}] 🔫 <span class="victim">${data.details.victim}</span> ${data.details.headshot ? '<span class="headshot">🎯 HEADSHOT</span>' : ''}`;
+            feed.prepend(item);
+        }
+
+        if (data.type === 'PLAYER_UPDATE') {
+            let container = document.getElementById('player-list');
+            let pId = `player-${data.details.player.replace(/\s+/g, '-')}`;
+            let pRow = document.getElementById(pId);
+
+            if (!pRow) {
+                pRow = document.createElement('div');
+                pRow.id = pId;
+                pRow.className = 'player-row';
+                container.appendChild(pRow);
             }
 
-            document.getElementById('secAuth').classList.add('hidden');
-            document.getElementById('tokenCard').classList.remove('hidden');
-            document.getElementById('logoutBtn').classList.remove('hidden');
-            document.getElementById('tokenDisplay').innerText = currentUser.token;
-            document.getElementById('userStatus').innerText = `Player: ${currentUser.username} (${currentUser.role})`;
-
-            const isAdmin = currentUser.role === 'ADMIN';
-            const hasTeam = !!currentUser.teamId;
-
-            // Xử lý nút Admin: Nếu không phải Admin thì chắc chắn ẩn
-            const adminSetupBtn = document.getElementById('adminSetupBtn');
-            if (isAdmin) {
-                adminSetupBtn.classList.remove('hidden');
-            } else {
-                adminSetupBtn.classList.add('hidden');
-            }
-
-            if (!hasTeam && !isAdmin) {
-                document.getElementById('secTeam').classList.remove('hidden');
-                document.getElementById('secTournament').classList.add('hidden');
-            } else {
-                document.getElementById('secTeam').classList.add('hidden');
-                document.getElementById('secTournament').classList.remove('hidden');
-                document.getElementById('secTeamList').classList.remove('hidden');
-                loadDashboard();
-                loadTeamsList();
-            }
+            pRow.innerHTML = `
+                <span><strong>${data.details.player}</strong> (${data.details.weapon})</span>
+                <span class="hp-bar">❤️ HP: ${data.details.hp} | 🛡️ ${data.details.armor} | 💵 $${data.details.money}</span>
+            `;
         }
+    });
 
-        async function login() {
-            const u = document.getElementById('authUsername').value;
-            const p = document.getElementById('authPassword').value;
-            const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: u, password: p }) });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            currentUser = data.user;
-            localStorage.setItem('vct_user', JSON.stringify(currentUser));
-            updateUIFlow();
-        }
+    socket.on('bracket_updated', () => {
+        location.reload();
+    });
+</script>
 
-        async function register() {
-            const u = document.getElementById('authUsername').value;
-            const p = document.getElementById('authPassword').value;
-            const res = await fetch('/api/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: u, password: p }) });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            currentUser = data.user;
-            localStorage.setItem('vct_user', JSON.stringify(currentUser));
-            updateUIFlow();
-        }
-
-        function logout() {
-            currentUser = null;
-            localStorage.removeItem('vct_user');
-            document.getElementById('authUsername').value = '';
-            document.getElementById('authPassword').value = '';
-            updateUIFlow();
-        }
-
-        async function createTeam() {
-            const name = document.getElementById('teamName').value;
-            const pass = document.getElementById('teamPass').value;
-            const res = await fetch('/api/team/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass }) });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            currentUser.teamId = data.team.id;
-            localStorage.setItem('vct_user', JSON.stringify(currentUser));
-            updateUIFlow();
-        }
-
-        async function joinTeam() {
-            const name = document.getElementById('teamName').value;
-            const pass = document.getElementById('teamPass').value;
-            const res = await fetch('/api/team/join', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass }) });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            currentUser.teamId = data.team.id;
-            localStorage.setItem('vct_user', JSON.stringify(currentUser));
-            updateUIFlow();
-        }
-
-        async function deleteTeamByAdmin(teamId) {
-            if (!confirm('Bạn có chắc chắn muốn xóa đội này khỏi giải đấu?')) return;
-            const res = await fetch('/api/admin/delete-team', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: currentUser.id, teamId })
-            });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            loadTeamsList();
-            loadDashboard();
-        }
-
-        async function toggleAdminPanel() {
-            const panel = document.getElementById('adminPanel');
-            panel.classList.toggle('hidden');
-            if (!panel.classList.contains('hidden')) {
-                const res = await fetch('/api/teams');
-                allTeams = await res.json();
-                renderPairingInputs();
-            }
-        }
-
-        function renderPairingInputs() {
-            const container = document.getElementById('pairingSlots');
-            const matchCount = Math.max(1, Math.ceil(allTeams.length / 2));
-            let html = '';
-            for (let i = 0; i < matchCount; i++) {
-                const opts = allTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-                html += `
-                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-900/90 p-3 rounded-lg border border-slate-800">
-                        <span class="text-xs font-orbitron font-bold text-slate-400 w-20">TRẬN ${i + 1}:</span>
-                        <div class="flex items-center gap-2 flex-1">
-                            <select id="slot_${i}_A" class="bg-slate-800 border border-slate-700 text-xs p-2 rounded-md text-white flex-1 outline-none focus:border-vct-red">${opts}</select>
-                            <span class="text-xs font-orbitron font-black text-vct-red px-1">VS</span>
-                            <select id="slot_${i}_B" class="bg-slate-800 border border-slate-700 text-xs p-2 rounded-md text-white flex-1 outline-none focus:border-vct-red">${opts}</select>
-                        </div>
-                    </div>`;
-            }
-            container.innerHTML = html;
-        }
-
-        async function saveCustomBracket() {
-            const matchCount = Math.max(1, Math.ceil(allTeams.length / 2));
-            const pairings = [];
-            for (let i = 0; i < matchCount; i++) {
-                pairings.push({ teamAId: document.getElementById(`slot_${i}_A`).value, teamBId: document.getElementById(`slot_${i}_B`).value });
-            }
-            const res = await fetch('/api/admin/setup-bracket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id, pairings }) });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            document.getElementById('adminPanel').classList.add('hidden');
-            loadDashboard();
-        }
-
-        async function startMatchByAdmin(matchId) {
-            const res = await fetch('/api/admin/start-match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id, matchId }) });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            loadDashboard();
-        }
-
-        async function loadDashboard() {
-            const res = await fetch('/api/dashboard');
-            const data = await res.json();
-            const matches = data.matches || [];
-            allTeams = data.teams || [];
-
-            const round1Col = document.getElementById('round1Col');
-            const isAdmin = currentUser && currentUser.role === 'ADMIN';
-
-            if (matches.length === 0) {
-                round1Col.innerHTML = `<p class="text-slate-500 text-xs font-mono italic text-center py-6">Chưa tạo sơ đồ thi đấu.</p>`;
-                document.getElementById('secPickBan').classList.add('hidden');
-                return;
-            }
-
-            let html = '';
-            activeMatchForUser = null;
-
-            matches.forEach((m, idx) => {
-                const isMyTeamA = currentUser.teamId === m.teamA?.id;
-                const isMyTeamB = currentUser.teamId === m.teamB?.id;
-
-                if (isMyTeamA || isMyTeamB || isAdmin) {
-                    activeMatchForUser = m;
-                }
-
-                const cardStateClass = m.status === 'READY' ? 'border-vct-cyan' : (m.status !== 'WAITING' ? 'active' : '');
-
-                html += `
-                    <div class="vct-bracket-card ${cardStateClass}">
-                        <!-- BADGE MẬT MÃ TRẬN ĐẤU GIỐNG VCT BROADCAST -->
-                        <div class="vct-match-tag">
-                            M${idx + 1}
-                        </div>
-
-                        <div class="p-2 flex-1 bg-[#0A1017] flex flex-col justify-between space-y-1">
-                            <div class="flex justify-between items-center text-[9px] font-orbitron px-1 text-slate-400 border-b border-slate-800/60 pb-1">
-                                <span>BO3 MATCH</span>
-                                <span class="font-bold uppercase ${m.status==='READY'?'text-vct-cyan':'text-vct-gold'}">${m.status}</span>
-                            </div>
-
-                            <div class="space-y-1">
-                                <div class="flex justify-between items-center bg-[#131F2C] px-2.5 py-1 rounded">
-                                    <span class="font-bold text-xs truncate max-w-[130px] ${m.scoreA > m.scoreB ? 'text-vct-red font-black' : 'text-slate-200'}">
-                                        ${m.teamA?.name || 'TBD'}
-                                    </span>
-                                    <span class="font-mono text-xs font-bold ${m.scoreA > m.scoreB ? 'text-vct-red' : 'text-slate-400'}">${m.scoreA}</span>
-                                </div>
-                                <div class="flex justify-between items-center bg-[#131F2C] px-2.5 py-1 rounded">
-                                    <span class="font-bold text-xs truncate max-w-[130px] ${m.scoreB > m.scoreA ? 'text-vct-red font-black' : 'text-slate-200'}">
-                                        ${m.teamB?.name || 'TBD'}
-                                    </span>
-                                    <span class="font-mono text-xs font-bold ${m.scoreB > m.scoreA ? 'text-vct-red' : 'text-slate-400'}">${m.scoreB}</span>
-                                </div>
-                            </div>
-
-                            ${isAdmin && m.status === 'WAITING' ? `
-                                <button onclick="startMatchByAdmin('${m.id}')" class="w-full mt-1 bg-vct-red hover:bg-vct-red-dark text-white text-[9px] font-orbitron py-1 rounded font-bold uppercase transition">
-                                    MỞ PICK MAP
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-
-            round1Col.innerHTML = html;
-            renderPickSection();
-        }
-
-        // PHẦN BAN PICK / HIỂN THỊ MAP CHO THÀNH VIÊN
-        function renderPickSection() {
-            const secPickBan = document.getElementById('secPickBan');
-            const activePickCard = document.getElementById('activePickCard');
-            const notice = document.getElementById('activeMatchNotice');
-
-            if (!activeMatchForUser) {
-                secPickBan.classList.add('hidden');
-                return;
-            }
-
-            secPickBan.classList.remove('hidden');
-            const m = activeMatchForUser;
-            const isTeamA = currentUser.teamId === m.teamA?.id;
-            const isTeamB = currentUser.teamId === m.teamB?.id;
-            const isAdmin = currentUser.role === 'ADMIN';
-
-            const myTeam = allTeams.find(t => t.id === currentUser.teamId);
-            const isCaptain = myTeam && myTeam.leaderId === currentUser.id;
-
-            notice.innerText = `Trận đấu: ${m.teamA?.name || 'TBD'} VS ${m.teamB?.name || 'TBD'}`;
-
-            // Hàm tạo giao diện hiển thị danh sách các map đã chọn / phe chơi
-            function renderVetoSummaryHTML() {
-                const map1 = m.bo3Maps?.[0];
-                const map2 = m.bo3Maps?.[1];
-                const map3 = m.bo3Maps?.[2];
-
-                let teamA_Title = m.teamA?.name || 'Team A';
-                let teamB_Title = m.teamB?.name || 'Team B';
-
-                if (isTeamA) {
-                    teamA_Title = `${m.teamA.name} (Team Mình)`;
-                    teamB_Title = `${m.teamB.name} (Đội Bạn)`;
-                } else if (isTeamB) {
-                    teamA_Title = `${m.teamA.name} (Đội Bạn)`;
-                    teamB_Title = `${m.teamB.name} (Team Mình)`;
-                }
-
-                return `
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-                        <!-- MAP 1 -->
-                        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
-                                <span class="text-[11px] font-orbitron font-extrabold text-vct-cyan">MAP 1 ${map1 ? `: ${map1.name}` : ''}</span>
-                                <span class="text-[10px] text-slate-400 font-mono">${map1 ? `Pick: ${m.teamA?.name}` : 'Chờ Pick'}</span>
-                            </div>
-                            ${map1 ? `
-                                <div class="text-xs font-mono space-y-1">
-                                    <div class="flex justify-between"><span class="text-slate-300">${teamA_Title}:</span> <b class="text-emerald-400">${map1.sideA}</b></div>
-                                    <div class="flex justify-between"><span class="text-slate-300">${teamB_Title}:</span> <b class="text-amber-400">${map1.sideB}</b></div>
-                                </div>
-                            ` : `<p class="text-[11px] text-slate-500 italic">Đang chờ Team A chọn Map & Phe...</p>`}
-                        </div>
-
-                        <!-- MAP 2 -->
-                        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
-                                <span class="text-[11px] font-orbitron font-extrabold text-vct-red">MAP 2 ${map2 ? `: ${map2.name}` : ''}</span>
-                                <span class="text-[10px] text-slate-400 font-mono">${map2 ? `Pick: ${m.teamB?.name}` : 'Chờ Pick'}</span>
-                            </div>
-                            ${map2 ? `
-                                <div class="text-xs font-mono space-y-1">
-                                    <div class="flex justify-between"><span class="text-slate-300">${teamB_Title}:</span> <b class="text-emerald-400">${map2.sideB}</b></div>
-                                    <div class="flex justify-between"><span class="text-slate-300">${teamA_Title}:</span> <b class="text-amber-400">${map2.sideA}</b></div>
-                                </div>
-                            ` : `<p class="text-[11px] text-slate-500 italic">Đang chờ Team B chọn Map & Phe...</p>`}
-                        </div>
-
-                        <!-- MAP 3 DECIDER -->
-                        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
-                                <span class="text-[11px] font-orbitron font-extrabold text-vct-gold">DECIDER MAP 3 ${map3 ? `: ${map3.name}` : ''}</span>
-                                <span class="text-[10px] text-slate-400 font-mono">Tự Động</span>
-                            </div>
-                            ${map3 ? `
-                                <div class="text-xs font-mono space-y-1">
-                                    <div class="flex justify-between"><span class="text-slate-300">${teamA_Title}:</span> <b class="text-emerald-400">${map3.sideA}</b></div>
-                                    <div class="flex justify-between"><span class="text-slate-300">${teamB_Title}:</span> <b class="text-amber-400">${map3.sideB}</b></div>
-                                </div>
-                            ` : `<p class="text-[11px] text-slate-500 italic">Sinh tự động sau khi chọn Map 2...</p>`}
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Nếu người dùng KHÔNG PHẢI ĐỘI TRƯỞNG hoặc là Admin: Chỉ hiển thị Bảng tổng hợp chi tiết Map/Phe
-            if (!isCaptain && !isAdmin) {
-                activePickCard.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="flex items-center gap-2 bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                            <span class="text-amber-400">ℹ️</span>
-                            <p class="text-xs text-slate-300">Bạn đang ở chế độ xem thành viên đội. Dưới đây là danh sách Map & Phe thi đấu do Đội Trưởng lựa chọn:</p>
-                        </div>
-                        ${renderVetoSummaryHTML()}
-                    </div>
-                `;
-                return;
-            }
-
-            if (isAdmin) {
-                activePickCard.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="p-2.5 text-center text-xs text-vct-gold font-orbitron bg-vct-gold/10 rounded-lg border border-vct-gold/30">Chế độ ADMIN: Đang theo dõi tiến trình Pick/Ban của các đội</div>
-                        ${renderVetoSummaryHTML()}
-                    </div>`;
-                return;
-            }
-
-            // Nếu LÀ ĐỘI TRƯỞNG -> Hiện Form Pick Map kết hợp Bảng Summary bên dưới
-            if (m.status === 'PICKING_MAP1') {
-                if (isTeamA) {
-                    const opts = mapPool.map(mp => `<option value="${mp}">${mp}</option>`).join('');
-                    activePickCard.innerHTML = `
-                        <p class="text-xs font-orbitron font-extrabold text-vct-cyan uppercase tracking-wider">Lượt Đội Trưởng Team A (${m.teamA.name}): Chọn Map 1</p>
-                        <div class="space-y-3 pt-1">
-                            <div>
-                                <label class="text-[11px] text-slate-400 block mb-1 font-orbitron">Chọn Map 1:</label>
-                                <select id="inputMap1" class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-xs font-mono text-white outline-none focus:border-vct-cyan">${opts}</select>
-                            </div>
-                            <div>
-                                <label class="text-[11px] text-slate-400 block mb-1 font-orbitron">Chọn Phe Khởi Đầu Map 1 Cho Team Bạn:</label>
-                                <select id="inputSideA1" class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-xs font-mono text-white outline-none focus:border-vct-cyan">
-                                    <option value="CT">Counter-Terrorists (CT)</option>
-                                    <option value="TERRORIST">Terrorists (T)</option>
-                                </select>
-                            </div>
-                            <button onclick="submitPickMap1()" class="w-full bg-vct-cyan hover:brightness-110 text-slate-950 font-orbitron font-extrabold py-2.5 rounded-lg text-xs uppercase tracking-wider shadow-lg shadow-vct-cyan/20 transition">Xác Nhận Pick Map 1</button>
-                        </div>
-                        ${renderVetoSummaryHTML()}`;
-                } else {
-                    activePickCard.innerHTML = `
-                        <div class="p-3 text-center text-xs text-slate-400 font-sans">Đang chờ Đội Trưởng của <b>${m.teamA.name}</b> chọn Map 1...</div>
-                        ${renderVetoSummaryHTML()}`;
-                }
-            } else if (m.status === 'PICKING_MAP2') {
-                if (isTeamB) {
-                    const map1Name = m.bo3Maps[0].name;
-                    const availMaps = mapPool.filter(mp => mp !== map1Name);
-                    const opts = availMaps.map(mp => `<option value="${mp}">${mp}</option>`).join('');
-
-                    activePickCard.innerHTML = `
-                        <p class="text-xs font-orbitron font-extrabold text-vct-red uppercase tracking-wider">Lượt Đội Trưởng Team B (${m.teamB.name}): Chọn Map 2</p>
-                        <div class="space-y-3 pt-1">
-                            <div>
-                                <label class="text-[11px] text-slate-400 block mb-1 font-orbitron">Chọn Map 2 (Khác ${map1Name}):</label>
-                                <select id="inputMap2" class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-xs font-mono text-white outline-none focus:border-vct-red">${opts}</select>
-                            </div>
-                            <div>
-                                <label class="text-[11px] text-slate-400 block mb-1 font-orbitron">Chọn Phe Khởi Đầu Map 2 Cho Team Bạn:</label>
-                                <select id="inputSideB2" class="w-full bg-slate-900 border border-slate-700 p-2.5 rounded-lg text-xs font-mono text-white outline-none focus:border-vct-red">
-                                    <option value="CT">Counter-Terrorists (CT)</option>
-                                    <option value="TERRORIST">Terrorists (T)</option>
-                                </select>
-                            </div>
-                            <button onclick="submitPickMap2()" class="w-full bg-vct-red hover:bg-vct-red-dark text-white font-orbitron font-extrabold py-2.5 rounded-lg text-xs uppercase tracking-wider shadow-lg shadow-vct-red/25 transition">Xác Nhận Pick Map 2 (Decider Map 3 Tự Sinh)</button>
-                        </div>
-                        ${renderVetoSummaryHTML()}`;
-                } else {
-                    activePickCard.innerHTML = `
-                        <div class="p-3 text-center text-xs text-slate-400 font-sans">Đang chờ Đội Trưởng của <b>${m.teamB.name}</b> chọn Map 2...</div>
-                        ${renderVetoSummaryHTML()}`;
-                }
-            } else {
-                activePickCard.innerHTML = renderVetoSummaryHTML();
-            }
-        }
-
-        async function submitPickMap1() {
-            const map1 = document.getElementById('inputMap1').value;
-            const sideA1 = document.getElementById('inputSideA1').value;
-            const res = await fetch('/api/match/pick-map1', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: currentUser.id, matchId: activeMatchForUser.id, map1, sideA1 })
-            });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            loadDashboard();
-        }
-
-        async function submitPickMap2() {
-            const map2 = document.getElementById('inputMap2').value;
-            const sideB2 = document.getElementById('inputSideB2').value;
-            const res = await fetch('/api/match/pick-map2', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: currentUser.id, matchId: activeMatchForUser.id, map2, sideB2 })
-            });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            loadDashboard();
-        }
-
-        async function loadTeamsList() {
-            const res = await fetch('/api/teams');
-            const teams = await res.json();
-            const container = document.getElementById('teamsContainer');
-            const isAdmin = currentUser && currentUser.role === 'ADMIN';
-
-            container.innerHTML = teams.map(t => `
-                <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 shadow-md flex flex-col justify-between">
-                    <div>
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-                            <h3 class="font-orbitron font-bold text-white text-sm tracking-wide flex items-center gap-1.5">
-                                <span class="w-1.5 h-3 bg-vct-cyan rounded-full"></span>
-                                ${t.name}
-                            </h3>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-mono bg-slate-900 px-2 py-0.5 rounded text-slate-400 border border-slate-800">${t.members.length} Player(s)</span>
-                                ${isAdmin ? `
-                                    <button onclick="deleteTeamByAdmin('${t.id}')" class="bg-vct-red/20 hover:bg-vct-red border border-vct-red/50 hover:border-vct-red text-vct-red hover:text-white text-[10px] font-orbitron font-bold px-2 py-0.5 rounded transition shadow-sm hover:shadow-vct-red/30">
-                                        Xóa
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                        <div class="text-[11px] text-slate-400">
-                            <span class="block font-orbitron font-semibold text-slate-500 mb-1 uppercase tracking-wider">Thành viên:</span>
-                            <ul class="space-y-1">
-                                ${t.members.map(m => `
-                                    <li class="flex items-center gap-1.5 ${m.isLeader ? 'text-vct-gold font-bold' : 'text-slate-300'}">
-                                        <span class="text-[10px]">${m.isLeader ? '👑' : '•'}</span>
-                                        <span>${m.username}</span>${m.isLeader ? '<span class="text-[9px] font-orbitron text-vct-gold/80 uppercase">(Cap)</span>' : ''}
-                                    </li>`).join('')}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        updateUIFlow();
-    </script>
 </body>
 </html>
