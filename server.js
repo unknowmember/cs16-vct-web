@@ -53,7 +53,7 @@ async function initAdmin() {
                 role: 'ADMIN', teamId: null,
                 token: crypto.randomBytes(10).toString('hex').toUpperCase()
             });
-            console.log("Khởi tạo Tài khoản Admin mặc định thành công!");
+            console.log("Khởi tạo Admin mặc định thành công!");
         }
     } catch (err) {
         console.error("Lỗi khởi tạo Admin:", err.message);
@@ -62,7 +62,55 @@ async function initAdmin() {
 initAdmin();
 
 // =========================================================================
-// 1. AUTHENTICATION (ĐĂNG NHẬP / ĐĂNG KÝ)
+// HÀM TỰ ĐỘNG ĐẨY ĐỘI THẮNG VÒNG 1 VÀO TRẬN CHUNG KẾT (M3 - ROUND 2)
+// =========================================================================
+async function checkAndAdvanceBracket() {
+    try {
+        const r1Matches = await Match.find({ round: 1 }).sort({ id: 1 });
+        if (r1Matches.length === 0) return;
+
+        // Lấy đội thắng của Match 1 và Match 2
+        const getWinner = (m) => {
+            if (!m || m.status !== 'FINISHED') return { id: 'TBD', name: 'TBD (Chờ Đội Thắng)' };
+            if (m.scoreA > m.scoreB) return m.teamA;
+            if (m.scoreB > m.scoreA) return m.teamB;
+            return { id: 'TBD', name: 'TBD' };
+        };
+
+        const winnerM1 = getWinner(r1Matches[0]);
+        const winnerM2 = r1Matches.length > 1 ? getWinner(r1Matches[1]) : { id: 'BYE', name: 'BYE' };
+
+        let finalMatch = await Match.findOne({ id: 'M3', round: 2 });
+
+        if (!finalMatch) {
+            finalMatch = new Match({
+                id: 'M3',
+                round: 2,
+                teamA: winnerM1,
+                teamB: winnerM2,
+                status: 'WAITING',
+                bo3Maps: [],
+                scoreA: 0,
+                scoreB: 0
+            });
+        } else {
+            finalMatch.teamA = winnerM1;
+            finalMatch.teamB = winnerM2;
+        }
+
+        // Nếu cả 2 đội đều đã xác định (không còn TBD) thì sẵn sàng chờ đấu Chung Kết
+        if (winnerM1.id !== 'TBD' && winnerM2.id !== 'TBD' && finalMatch.status === 'WAITING') {
+            finalMatch.status = 'WAITING';
+        }
+
+        await finalMatch.save();
+    } catch (err) {
+        console.error("Lỗi tự động đẩy nhánh đấu:", err);
+    }
+}
+
+// =========================================================================
+// 1. AUTHENTICATION
 // =========================================================================
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
@@ -87,7 +135,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // =========================================================================
-// 2. TEAMS (QUẢN LÝ ĐỘI TUYỂN)
+// 2. TEAMS
 // =========================================================================
 app.get('/api/teams', async (req, res) => {
     const teams = await Team.find();
@@ -133,7 +181,7 @@ app.post('/api/team/join', async (req, res) => {
 });
 
 // =========================================================================
-// 3. ADMIN: XÓA ĐỘI & TỰ ĐỘNG AUTO WIN CHO ĐỐI THỦ
+// 3. ADMIN: XÓA ĐỘI & AUTO WIN
 // =========================================================================
 app.post('/api/admin/delete-team', async (req, res) => {
     try {
@@ -175,7 +223,10 @@ app.post('/api/admin/delete-team', async (req, res) => {
             await match.save();
         }
 
-        res.json({ success: true, message: "Xóa đội thành công và tự động cho đối thủ Thắng (Auto Win)!" });
+        // Cập nhật lại nhánh đấu
+        await checkAndAdvanceBracket();
+
+        res.json({ success: true, message: "Xóa đội thành công và đã cập nhật nhánh đấu!" });
     } catch (err) {
         console.error("Lỗi xóa đội:", err);
         res.status(500).json({ error: "Lỗi server khi xóa đội!" });
@@ -186,6 +237,7 @@ app.post('/api/admin/delete-team', async (req, res) => {
 // 4. MATCH & DASHBOARD
 // =========================================================================
 app.get('/api/dashboard', async (req, res) => {
+    await checkAndAdvanceBracket(); // Kiểm tra cập nhật nhánh đấu trước khi trả kết quả
     const matches = await Match.find();
     const teams = await Team.find();
     res.json({ matches, teams });
@@ -226,7 +278,18 @@ app.post('/api/admin/setup-bracket', async (req, res) => {
         });
     }
 
+    // Thêm sẵn trận Chung Kết (M3 - Round 2)
+    newMatches.push({
+        id: 'M3', round: 2,
+        teamA: { id: 'TBD', name: 'TBD (Chờ Đội Thắng)' },
+        teamB: { id: 'TBD', name: 'TBD (Chờ Đội Thắng)' },
+        status: 'WAITING',
+        bo3Maps: [], scoreA: 0, scoreB: 0
+    });
+
     await Match.insertMany(newMatches);
+    await checkAndAdvanceBracket();
+
     res.json({ success: true });
 });
 
@@ -299,21 +362,17 @@ app.post('/api/match/pick-map2', async (req, res) => {
 });
 
 // =========================================================================
-// 6. API KẾT NỐI SERVER CS 1.6 (HLDS + AMXMODX PLUGIN)
+// 6. API CS 1.6
 // =========================================================================
-
-// 6.1. Đăng nhập trong game CS 1.6 bằng Player Token (/login <token>)
 app.post('/api/cs/login', async (req, res) => {
     try {
         const { token } = req.body;
         if (!token) return res.status(400).json({ error: "Thiếu Token!" });
 
         const user = await User.findOne({ token: token.trim().toUpperCase() });
-        if (!user) return res.status(404).json({ error: "Token không tồn tại hoặc không hợp lệ!" });
+        if (!user) return res.status(404).json({ error: "Token không tồn tại!" });
 
         const team = user.teamId ? await Team.findOne({ id: user.teamId }) : null;
-
-        // Kiểm tra xem gamer này có trận đấu nào đang chờ hoặc diễn ra không
         const activeMatch = team ? await Match.findOne({
             $or: [{ 'teamA.id': team.id }, { 'teamB.id': team.id }],
             status: { $in: ['READY', 'PLAYING'] }
@@ -326,74 +385,41 @@ app.post('/api/cs/login', async (req, res) => {
 
         res.json({
             success: true,
-            player: {
-                id: user.id,
-                username: user.username,
-                role: user.role,
-                teamId: user.teamId,
-                teamName: team ? team.name : null,
-                isLeader: team ? team.leaderId === user.id : false,
-                side: playerSideInMatch
-            },
-            activeMatch: activeMatch ? {
-                matchId: activeMatch.id,
-                status: activeMatch.status
-            } : null
+            player: { id: user.id, username: user.username, role: user.role, teamId: user.teamId, teamName: team ? team.name : null, isLeader: team ? team.leaderId === user.id : false, side: playerSideInMatch },
+            activeMatch: activeMatch ? { matchId: activeMatch.id, status: activeMatch.status } : null
         });
     } catch (err) {
         res.status(500).json({ error: "Lỗi kết nối CS Login!" });
     }
 });
 
-// 6.2. Server CS 1.6 lấy thông tin trận đấu đang chuẩn bị / thi đấu
 app.get('/api/cs/live-match', async (req, res) => {
     try {
         const match = await Match.findOne({ status: { $in: ['READY', 'PLAYING'] } });
-        if (!match) return res.status(404).json({ message: "Hiện không có trận đấu nào đang chờ/diễn ra!" });
+        if (!match) return res.status(404).json({ message: "Không có trận đấu nào đang diễn ra!" });
 
-        res.json({
-            success: true,
-            match: {
-                id: match.id,
-                teamA: match.teamA,
-                teamB: match.teamB,
-                status: match.status,
-                scoreA: match.scoreA,
-                scoreB: match.scoreB,
-                bo3Maps: match.bo3Maps
-            }
-        });
+        res.json({ success: true, match });
     } catch (err) {
-        res.status(500).json({ error: "Lỗi lấy thông tin trận đấu cho CS 1.6!" });
+        res.status(500).json({ error: "Lỗi lấy thông tin trận đấu CS 1.6!" });
     }
 });
 
-// 6.3. Server CS 1.6 gửi kết quả Map đấu về Web (Tỉ số round & Đội thắng)
 app.post('/api/cs/update-map-result', async (req, res) => {
     try {
         const { matchId, mapName, winnerTeamId, scoreA, scoreB } = req.body;
         const match = await Match.findOne({ id: matchId });
-
         if (!match) return res.status(404).json({ error: "Không tìm thấy trận đấu!" });
 
-        // Cập nhật trạng thái trận đấu đang diễn ra
         match.status = 'PLAYING';
+        if (winnerTeamId === match.teamA.id) match.scoreA += 1;
+        else if (winnerTeamId === match.teamB.id) match.scoreB += 1;
 
-        // Cộng tỉ số trận thắng (BO3)
-        if (winnerTeamId === match.teamA.id) {
-            match.scoreA += 1;
-        } else if (winnerTeamId === match.teamB.id) {
-            match.scoreB += 1;
-        }
-
-        // Lưu chi tiết tỷ số từng map (ví dụ 16-12)
         const mapObj = match.bo3Maps.find(m => m.name === mapName);
         if (mapObj) {
             mapObj.winner = winnerTeamId;
             mapObj.scoreDetail = `${scoreA}-${scoreB}`;
         }
 
-        // Tự động kiểm tra đội chạm 2 map thắng trước sẽ thắng BO3
         if (match.scoreA >= 2) {
             match.status = 'FINISHED';
             await Team.updateOne({ id: match.teamA.id }, { $inc: { wins: 1 } });
@@ -403,14 +429,16 @@ app.post('/api/cs/update-map-result', async (req, res) => {
         }
 
         await match.save();
+        await checkAndAdvanceBracket(); // Đẩy nhánh đấu sau khi trận kết thúc
+
         res.json({ success: true, match });
     } catch (err) {
-        res.status(500).json({ error: "Lỗi cập nhật kết quả từ CS 1.6!" });
+        res.status(500).json({ error: "Lỗi cập nhật kết quả CS 1.6!" });
     }
 });
 
 // =========================================================================
-// 7. PHỤC VỤ TRANG INDEX.HTML (BỘ DÒ FILE TĨNH CỦA RENDER)
+// 7. PHỤC VỤ FILE TĨNH INDEX.HTML
 // =========================================================================
 app.get('*', (req, res) => {
     const possiblePaths = [
@@ -422,12 +450,8 @@ app.get('*', (req, res) => {
     ];
 
     const foundPath = possiblePaths.find(p => fs.existsSync(p));
-
-    if (foundPath) {
-        res.sendFile(foundPath);
-    } else {
-        res.status(404).send("❌ Không tìm thấy file index.html");
-    }
+    if (foundPath) res.sendFile(foundPath);
+    else res.status(404).send("❌ Không tìm thấy file index.html");
 });
 
 const PORT = process.env.PORT || 3000;
@@ -435,6 +459,6 @@ app.listen(PORT, () => {
     console.log(`====================================================`);
     console.log(` VCT BO3 Server running on port ${PORT}`);
     console.log(` MongoDB: Connected`);
-    console.log(` AMXModX APIs: Ready (/api/cs/login, /api/cs/live-match)`);
+    console.log(` Bracket Auto Advance: Enabled`);
     console.log(`====================================================`);
 });
