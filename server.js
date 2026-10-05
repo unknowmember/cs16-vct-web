@@ -1,7 +1,8 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
 app.use(express.static(__dirname));
@@ -10,7 +11,6 @@ app.use(express.static(__dirname));
 const MAP_POOL = ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"];
 
 // Lưu trữ dữ liệu trong bộ nhớ (In-Memory Data)
-// Mặc định khởi tạo 1 tài khoản ADMIN (tk: admin / mk: 123) để kiểm thử
 let users = [
     { 
         id: 'usr_admin', 
@@ -70,7 +70,7 @@ app.post('/api/team/create', (req, res) => {
         id: 'team_' + Date.now(),
         name: teamName,
         password: teamPassword,
-        leaderId: user.id, // Đặt tài khoản tạo đội làm Đội Trưởng
+        leaderId: user.id,
         members: [{ userId: user.id, username: user.username, isLeader: true }]
     };
 
@@ -126,7 +126,7 @@ app.post('/api/admin/setup-bracket', (req, res) => {
             teamB: teamB ? { id: teamB.id, name: teamB.name } : null,
             scoreA: 0,
             scoreB: 0,
-            status: 'WAITING', // Các trạng thái: WAITING -> PICKING_MAP1 -> PICKING_MAP2 -> READY
+            status: 'WAITING',
             bo3Maps: []
         };
     });
@@ -154,10 +154,8 @@ app.get('/api/dashboard', (req, res) => {
 });
 
 // =========================================================================
-// 5. API PICK/BAN MAP (XỬ LÝ ĐÚNG CHẶT CHẼ LOGIC ĐỘI TRƯỞNG & THÀNH VIÊN)
+// 5. API PICK/BAN MAP
 // =========================================================================
-
-// Đội Trưởng Team A Pick Map 1 & Chọn Phe
 app.post('/api/match/pick-map1', (req, res) => {
     const { userId, matchId, map1, sideA1 } = req.body;
     const match = findMatch(matchId);
@@ -168,7 +166,6 @@ app.post('/api/match/pick-map1', (req, res) => {
         return res.status(403).json({ error: 'Chỉ Đội Trưởng của Team A mới có quyền thực hiện lượt Pick Map 1!' });
     }
 
-    // Tự động phân định phe ngược lại cho Team B
     const sideB1 = sideA1 === 'CT' ? 'TERRORIST' : 'CT';
 
     match.bo3Maps = [
@@ -179,7 +176,6 @@ app.post('/api/match/pick-map1', (req, res) => {
     res.json({ match });
 });
 
-// Đội Trưởng Team B Pick Map 2 & Tự động sinh Decider Map 3
 app.post('/api/match/pick-map2', (req, res) => {
     const { userId, matchId, map2, sideB2 } = req.body;
     const match = findMatch(matchId);
@@ -193,31 +189,46 @@ app.post('/api/match/pick-map2', (req, res) => {
     const sideA2 = sideB2 === 'CT' ? 'TERRORIST' : 'CT';
     const map1Name = match.bo3Maps[0]?.name;
 
-    // Lấy danh sách map còn lại chưa được pick
     const remainingMaps = MAP_POOL.filter(m => m !== map1Name && m !== map2);
-    
-    // Ngẫu nhiên chọn 1 map làm Decider Map 3
     const deciderMapName = remainingMaps[Math.floor(Math.random() * remainingMaps.length)] || 'de_dust2';
 
     match.bo3Maps.push({ name: map2, pickedBy: match.teamB.id, sideA: sideA2, sideB: sideB2 });
-    
-    // Decider Map 3 mặc định ngẫu nhiên/cố định chia phe chuẩn
     match.bo3Maps.push({ name: deciderMapName, pickedBy: 'DECIDER', sideA: 'CT', sideB: 'TERRORIST' });
 
-    match.status = 'READY'; // Đã chọn xong 3 Map, sẵn sàng thi đấu
+    match.status = 'READY';
 
     res.json({ match });
 });
 
-// Route chính trả về giao diện HTML
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+// =========================================================================
+// 6. PHỤC VỤ TRANG INDEX.HTML (BỘ DÒ TÌM ĐƯỜNG DẪN TỰ ĐỘNG)
+// =========================================================================
+app.get('*', (req, res) => {
+    const possiblePaths = [
+        path.join(__dirname, 'index.html'),
+        path.join(__dirname, 'Index.html'),
+        path.join(__dirname, 'public', 'index.html'),
+        path.join(__dirname, 'src', 'index.html')
+    ];
+
+    const foundPath = possiblePaths.find(p => fs.existsSync(p));
+
+    if (foundPath) {
+        res.sendFile(foundPath);
+    } else {
+        res.status(404).send(`
+            <div style="font-family: sans-serif; padding: 40px; text-align: center; color: #333;">
+                <h2>❌ Không tìm thấy file index.html!</h2>
+                <p>Hãy đảm bảo bạn đã push file <b>index.html</b> lên thư mục gốc trên GitHub.</p>
+            </div>
+        `);
+    }
 });
 
 // Khởi chạy Server
 app.listen(PORT, () => {
     console.log(`====================================================`);
-    console.log(` VCT CS 1.6 SERVER DANG CHAY TAI: http://localhost:${PORT}`);
+    console.log(` VCT CS 1.6 SERVER DANG CHAY TAI PORT: ${PORT}`);
     console.log(` Tai khoan Admin mac dinh: admin / Mat khau: 123`);
     console.log(`====================================================`);
 });
