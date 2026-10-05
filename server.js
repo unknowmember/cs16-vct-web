@@ -125,27 +125,41 @@ app.post('/api/cs/bot-hud-update', async (req, res) => {
     try {
         const { matchId, players, roundScoreA, roundScoreB, currentMapIndex } = req.body;
 
-        currentMatchHUD = {
-            matchId: matchId || "M1",
-            players: players || []
-        };
+        const targetMatchId = matchId || "M1";
+        let teamAName = "TEAM A";
+        let teamBName = "TEAM B";
 
-        if (matchId) {
+        // Tìm thông tin Match thực tế từ MongoDB để lấy đúng tên Team
+        const match = await Match.findOne({ id: targetMatchId });
+        if (match) {
+            teamAName = match.teamA?.name || "TEAM A";
+            teamBName = match.teamB?.name || "TEAM B";
+
             const updateFields = {};
             if (roundScoreA !== undefined) updateFields.roundScoreA = roundScoreA;
             if (roundScoreB !== undefined) updateFields.roundScoreB = roundScoreB;
             if (currentMapIndex !== undefined) updateFields.currentMapIndex = currentMapIndex;
 
             if (Object.keys(updateFields).length > 0) {
-                await Match.updateOne({ id: matchId }, { $set: updateFields });
+                await Match.updateOne({ id: targetMatchId }, { $set: updateFields });
             }
         }
 
-        // Bắn Socket Realtime ngay lập tức xuống Web Client
+        currentMatchHUD = {
+            matchId: targetMatchId,
+            teamAName,
+            teamBName,
+            roundScoreA: roundScoreA ?? match?.roundScoreA ?? 0,
+            roundScoreB: roundScoreB ?? match?.roundScoreB ?? 0,
+            players: players || []
+        };
+
+        // Gửi dữ liệu đã cập nhật tên Team chuẩn xuống Web Client
         io.emit('BOT_HUD_UPDATE', currentMatchHUD);
 
-        res.json({ success: true, message: "Đã nhận dữ liệu Bot HUD!" });
+        res.json({ success: true, message: "Đã nhận và đồng bộ dữ liệu Bot HUD!" });
     } catch (err) {
+        console.error("Lỗi Bot HUD:", err);
         res.status(500).json({ error: "Lỗi cập nhật Bot HUD!" });
     }
 });

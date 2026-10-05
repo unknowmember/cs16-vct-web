@@ -482,51 +482,62 @@
         });
 
         function renderRealtimeHUD(hudData) {
-            const tableBody = document.getElementById('hudPlayerTable');
-            if (!hudData || !hudData.players || hudData.players.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500 italic">Chờ Bot kết nối và gửi dữ liệu trận đấu...</td></tr>`;
-                return;
-            }
-
-            tableBody.innerHTML = hudData.players.map(p => {
-                const isDead = p.hp <= 0;
-                const hpPercent = Math.max(0, Math.min(100, p.hp));
-                const hpColor = hpPercent > 50 ? 'bg-emerald-500' : (hpPercent > 20 ? 'bg-amber-500' : 'bg-vct-red');
-                const itemsList = Array.isArray(p.items) ? p.items : (p.items ? p.items.split(',') : []);
-
-                return `
-                    <tr class="${isDead ? 'player-row-dead bg-red-950/20' : 'hover:bg-slate-900/50'}">
-                        <td class="p-2 font-bold ${isDead ? 'text-slate-500 line-through' : 'text-white'}">
-                            ${p.name || 'Bot'}
-                        </td>
-                        <td class="p-2">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${p.team === 'A' || p.team === 'CT' ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30' : 'bg-amber-600/30 text-amber-400 border border-amber-500/30'}">
-                                Team ${p.team}
-                            </span>
-                        </td>
-                        <td class="p-2">
-                            <div class="flex items-center gap-2">
-                                <span class="w-8 font-bold ${isDead ? 'text-vct-red' : 'text-emerald-400'}">${p.hp}</span>
-                                <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
-                                    <div class="hp-bar-fill h-full ${hpColor}" style="width: ${hpPercent}%"></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="p-2 font-bold text-vct-cyan">
-                            🔫 ${p.weapon || 'Knife'}
-                        </td>
-                        <td class="p-2">
-                            <div class="flex flex-wrap gap-1">
-                                ${itemsList.map(item => `<span class="bg-slate-800 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded text-[9px]">${item.trim()}</span>`).join('')}
-                            </div>
-                        </td>
-                        <td class="p-2 text-right font-bold text-slate-300">
-                            ${p.kills || 0} / ${p.deaths || 0}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+    if (hudData) {
+        // Cập nhật tên Đội thực tế từ Bot/Database
+        if (hudData.teamAName) document.getElementById('liveTeamAName').innerText = hudData.teamAName;
+        if (hudData.teamBName) document.getElementById('liveTeamBName').innerText = hudData.teamBName;
+        
+        // Cập nhật tỉ số Round realtime
+        if (hudData.roundScoreA !== undefined && hudData.roundScoreB !== undefined) {
+            document.getElementById('liveRoundScore').innerText = `(${hudData.roundScoreA} - ${hudData.roundScoreB})`;
         }
+    }
+
+    const tableBody = document.getElementById('hudPlayerTable');
+    if (!hudData || !hudData.players || hudData.players.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500 italic">Chờ Bot kết nối và gửi dữ liệu trận đấu...</td></tr>`;
+        return;
+    }
+
+    tableBody.innerHTML = hudData.players.map(p => {
+        const isDead = p.hp <= 0;
+        const hpPercent = Math.max(0, Math.min(100, p.hp));
+        const hpColor = hpPercent > 50 ? 'bg-emerald-500' : (hpPercent > 20 ? 'bg-amber-500' : 'bg-vct-red');
+        const itemsList = Array.isArray(p.items) ? p.items : (p.items ? p.items.split(',') : []);
+
+        return `
+            <tr class="${isDead ? 'player-row-dead bg-red-950/20' : 'hover:bg-slate-900/50'}">
+                <td class="p-2 font-bold ${isDead ? 'text-slate-500 line-through' : 'text-white'}">
+                    ${p.name || 'Bot'}
+                </td>
+                <td class="p-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${p.team === 'A' || p.team === 'CT' ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30' : 'bg-amber-600/30 text-amber-400 border border-amber-500/30'}">
+                        ${p.teamName || ('Team ' + p.team)}
+                    </span>
+                </td>
+                <td class="p-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 font-bold ${isDead ? 'text-vct-red' : 'text-emerald-400'}">${p.hp}</span>
+                        <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                            <div class="hp-bar-fill h-full ${hpColor}" style="width: ${hpPercent}%"></div>
+                        </div>
+                    </div>
+                </td>
+                <td class="p-2 font-bold text-vct-cyan">
+                    🔫 ${p.weapon || 'Knife'}
+                </td>
+                <td class="p-2">
+                    <div class="flex flex-wrap gap-1">
+                        ${itemsList.map(item => `<span class="bg-slate-800 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded text-[9px]">${item.trim()}</span>`).join('')}
+                    </div>
+                </td>
+                <td class="p-2 text-right font-bold text-slate-300">
+                    ${p.kills || 0} / ${p.deaths || 0}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
 
         function parseEmbedUrl(url) {
             if (!url) return '';
