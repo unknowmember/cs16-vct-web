@@ -5,8 +5,15 @@ const crypto = require('crypto');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: "*" }
+});
+
 app.use(express.json());
 app.use(cors());
 
@@ -35,11 +42,10 @@ const MatchSchema = new mongoose.Schema({
     bo3Maps: Array,
     scoreA: { type: Number, default: 0 },
     scoreB: { type: Number, default: 0 },
-    // CÁC TRƯỜNG MỚI PHỤC VỤ LIVESETUP / BROADCAST
     isLive: { type: Boolean, default: false },
-    streamUrl: { type: String, default: "" }, // Đường dẫn YouTube / Twitch / HLS / Embed ID
+    streamUrl: { type: String, default: "" },
     currentMapIndex: { type: Number, default: 1 },
-    roundScoreA: { type: Number, default: 0 }, // Tỉ số Round lẻ trong Map hiện tại
+    roundScoreA: { type: Number, default: 0 },
     roundScoreB: { type: Number, default: 0 }
 });
 
@@ -48,6 +54,12 @@ const Team = mongoose.model('Team', TeamSchema);
 const Match = mongoose.model('Match', MatchSchema);
 
 const MAP_POOL = ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"];
+
+// Biến lưu trữ HUD Live State hiện tại trong RAM
+let currentMatchHUD = {
+    matchId: null,
+    players: []
+};
 
 async function initAdmin() {
     try {
@@ -67,7 +79,6 @@ async function initAdmin() {
 }
 initAdmin();
 
-// TỰ ĐỘNG ĐẨY ĐỘI THẮNG VÒNG 1 VÀO TRẬN CHUNG KẾT (M3 - ROUND 2)
 async function checkAndAdvanceBracket() {
     try {
         const r1Matches = await Match.find({ round: 1 }).sort({ id: 1 });
@@ -106,6 +117,44 @@ async function checkAndAdvanceBracket() {
         console.error("Lỗi tự động đẩy nhánh đấu:", err);
     }
 }
+
+// ==========================================
+// API DÀNH CHO BOT TRONG GAME ĐỂ ĐẨY REALTIME HUD
+// ==========================================
+app.post('/api/cs/bot-hud-update', async (req, res) => {
+    try {
+        const { matchId, players, roundScoreA, roundScoreB, currentMapIndex } = req.body;
+
+        currentMatchHUD = {
+            matchId: matchId || "M1",
+            players: players || []
+        };
+
+        if (matchId) {
+            const updateFields = {};
+            if (roundScoreA !== undefined) updateFields.roundScoreA = roundScoreA;
+            if (roundScoreB !== undefined) updateFields.roundScoreB = roundScoreB;
+            if (currentMapIndex !== undefined) updateFields.currentMapIndex = currentMapIndex;
+
+            if (Object.keys(updateFields).length > 0) {
+                await Match.updateOne({ id: matchId }, { $set: updateFields });
+            }
+        }
+
+        // Bắn Socket Realtime ngay lập tức xuống Web Client
+        io.emit('BOT_HUD_UPDATE', currentMatchHUD);
+
+        res.json({ success: true, message: "Đã nhận dữ liệu Bot HUD!" });
+    } catch (err) {
+        res.status(500).json({ error: "Lỗi cập nhật Bot HUD!" });
+    }
+});
+
+// SOCKET.IO CONNECTIONS
+io.on('connection', (socket) => {
+    // Tự động gửi dữ liệu HUD mới nhất khi Web mở lên
+    socket.emit('BOT_HUD_UPDATE', currentMatchHUD);
+});
 
 // 1. AUTHENTICATION
 app.post('/api/register', async (req, res) => {
@@ -174,7 +223,7 @@ app.post('/api/team/join', async (req, res) => {
     res.json({ success: true, team });
 });
 
-// 3. ADMIN: XÓA ĐỘI & AUTO WIN
+// 3. ADMIN: XÓA ĐỘI
 app.post('/api/admin/delete-team', async (req, res) => {
     try {
         const { userId, teamId } = req.body;
@@ -294,7 +343,6 @@ app.post('/api/admin/start-match', async (req, res) => {
     res.json({ success: true, match });
 });
 
-// CẤU HÌNH LIVESTREAM VÀ TỈ SỐ LIVE (ADMIN)
 app.post('/api/admin/update-stream', async (req, res) => {
     try {
         const { userId, matchId, isLive, streamUrl, roundScoreA, roundScoreB, currentMapIndex } = req.body;
@@ -302,7 +350,6 @@ app.post('/api/admin/update-stream', async (req, res) => {
         if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin!' });
 
         if (isLive) {
-            // Tắt Live của tất cả các trận khác
             await Match.updateMany({ id: { $ne: matchId } }, { $set: { isLive: false } });
         }
 
@@ -320,6 +367,8 @@ app.post('/api/admin/update-stream', async (req, res) => {
         }
 
         await match.save();
+        
+        io.emit('MATCH_STATE_CHANGED', match);
         res.json({ success: true, match });
     } catch (err) {
         res.status(500).json({ error: "Lỗi cập nhật Live Stream!" });
@@ -420,62 +469,6 @@ app.get('/api/cs/live-match', async (req, res) => {
     }
 });
 
-app.post('/api/cs/update-live-score', async (req, res) => {
-    try {
-        const { matchId, roundScoreA, roundScoreB, currentMapIndex } = req.body;
-        const match = await Match.findOne({ id: matchId });
-        if (!match) return res.status(404).json({ error: "Không tìm thấy trận đấu!" });
-
-        if (roundScoreA !== undefined) match.roundScoreA = roundScoreA;
-        if (roundScoreB !== undefined) match.roundScoreB = roundScoreB;
-        if (currentMapIndex !== undefined) match.currentMapIndex = currentMapIndex;
-
-        await match.save();
-        res.json({ success: true, match });
-    } catch (err) {
-        res.status(500).json({ error: "Lỗi cập nhật Live Score!" });
-    }
-});
-
-app.post('/api/cs/update-map-result', async (req, res) => {
-    try {
-        const { matchId, mapName, winnerTeamId, scoreA, scoreB } = req.body;
-        const match = await Match.findOne({ id: matchId });
-        if (!match) return res.status(404).json({ error: "Không tìm thấy trận đấu!" });
-
-        match.status = 'PLAYING';
-        if (winnerTeamId === match.teamA.id) match.scoreA += 1;
-        else if (winnerTeamId === match.teamB.id) match.scoreB += 1;
-
-        const mapObj = match.bo3Maps.find(m => m.name === mapName);
-        if (mapObj) {
-            mapObj.winner = winnerTeamId;
-            mapObj.scoreDetail = `${scoreA}-${scoreB}`;
-        }
-
-        match.roundScoreA = 0;
-        match.roundScoreB = 0;
-        match.currentMapIndex = (match.currentMapIndex || 1) + 1;
-
-        if (match.scoreA >= 2) {
-            match.status = 'FINISHED';
-            match.isLive = false;
-            await Team.updateOne({ id: match.teamA.id }, { $inc: { wins: 1 } });
-        } else if (match.scoreB >= 2) {
-            match.status = 'FINISHED';
-            match.isLive = false;
-            await Team.updateOne({ id: match.teamB.id }, { $inc: { wins: 1 } });
-        }
-
-        await match.save();
-        await checkAndAdvanceBracket();
-
-        res.json({ success: true, match });
-    } catch (err) {
-        res.status(500).json({ error: "Lỗi cập nhật kết quả CS 1.6!" });
-    }
-});
-
 // 7. PHỤC VỤ FILE TĨNH INDEX.HTML
 app.get('*', (req, res) => {
     const possiblePaths = [
@@ -492,11 +485,10 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`====================================================`);
     console.log(` VCT BO3 Esports Server running on port ${PORT}`);
+    console.log(` Realtime Socket.IO Engine: Ready`);
     console.log(` MongoDB: Connected`);
-    console.log(` Bracket Auto Advance: Enabled`);
-    console.log(` Live Streaming Broadcast Engine: Ready`);
     console.log(`====================================================`);
 });
