@@ -15,39 +15,42 @@
                 <h1 class="text-2xl font-black text-red-500 tracking-wider">VALORANT MATCH SYSTEM CS 1.6</h1>
                 <p id="userStatus" class="text-xs text-gray-400 mt-1">Trạng thái: Chưa đăng nhập</p>
             </div>
-            <div id="tokenCard" class="hidden bg-gray-800 border border-red-500/40 px-4 py-2 rounded-lg text-right">
-                <p class="text-xs text-gray-400">Mã CS 1.6 Token (Nhập trong game):</p>
-                <p id="tokenDisplay" class="font-mono text-yellow-400 font-bold tracking-widest text-lg"></p>
+            <div id="headerRight" class="flex items-center gap-4">
+                <div id="tokenCard" class="hidden bg-gray-800 border border-red-500/40 px-4 py-2 rounded-lg text-right">
+                    <p class="text-xs text-gray-400">Mã CS 1.6 Token:</p>
+                    <p id="tokenDisplay" class="font-mono text-yellow-400 font-bold tracking-widest text-lg"></p>
+                </div>
+                <button id="logoutBtn" onclick="logout()" class="hidden bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-xs font-bold text-red-400 border border-gray-700">
+                    Đăng Xuất
+                </button>
             </div>
         </header>
 
-        <!-- AUTH & TEAM SETUP -->
-        <div id="authSection" class="grid md:grid-cols-2 gap-6">
-            <!-- TÀI KHOẢN -->
-            <div class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
-                <h2 class="text-lg font-bold text-red-400">1. Tài Khoản</h2>
-                <input id="authUsername" type="text" placeholder="Tên tài khoản" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
-                <input id="authPassword" type="password" placeholder="Mật khẩu" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
-                <div class="flex gap-2">
-                    <button onclick="login()" class="flex-1 bg-blue-600 hover:bg-blue-700 py-2.5 rounded font-bold transition">Đăng Nhập</button>
-                    <button onclick="register()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-2.5 rounded font-bold transition">Đăng Ký</button>
-                </div>
-            </div>
-
-            <!-- TẠO / VÀO TEAM -->
-            <div class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
-                <h2 class="text-lg font-bold text-red-400">2. Đội Thi Đấu</h2>
-                <input id="teamName" type="text" placeholder="Tên Team" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
-                <input id="teamPass" type="password" placeholder="Mật khẩu Team" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
-                <div class="flex gap-2">
-                    <button onclick="createTeam()" class="flex-1 bg-green-600 hover:bg-green-700 py-2.5 rounded font-bold transition">Tạo Team Mới</button>
-                    <button onclick="joinTeam()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-2.5 rounded font-bold transition">Vào Team Bằng Pass</button>
-                </div>
+        <!-- MỤC 1: ĐĂNG NHẬP / ĐĂNG KÝ -->
+        <div id="secAuth" class="max-w-md mx-auto bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
+            <h2 class="text-lg font-bold text-red-400">1. Tài Khoản</h2>
+            <input id="authUsername" type="text" placeholder="Tên tài khoản" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
+            <input id="authPassword" type="password" placeholder="Mật khẩu" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
+            <div class="flex gap-2">
+                <button onclick="login()" class="flex-1 bg-blue-600 hover:bg-blue-700 py-2.5 rounded font-bold transition">Đăng Nhập</button>
+                <button onclick="register()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-2.5 rounded font-bold transition">Đăng Ký</button>
             </div>
         </div>
 
-        <!-- DASHBOARD & CÂY SƠ ĐỒ -->
-        <div class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
+        <!-- MỤC 2: TẠO / VÀO TEAM -->
+        <div id="secTeam" class="hidden max-w-md mx-auto bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
+            <h2 class="text-lg font-bold text-red-400">2. Đội Thi Đấu</h2>
+            <p class="text-xs text-gray-400">Tài khoản của bạn chưa thuộc team nào. Hãy tạo hoặc gia nhập team:</p>
+            <input id="teamName" type="text" placeholder="Tên Team" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
+            <input id="teamPass" type="password" placeholder="Mật khẩu Team" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
+            <div class="flex gap-2">
+                <button onclick="createTeam()" class="flex-1 bg-green-600 hover:bg-green-700 py-2.5 rounded font-bold transition">Tạo Team Mới</button>
+                <button onclick="joinTeam()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-2.5 rounded font-bold transition">Vào Team Bằng Pass</button>
+            </div>
+        </div>
+
+        <!-- MỤC 3: SƠ ĐỒ & LỊCH THI ĐẤU -->
+        <div id="secTournament" class="hidden bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-bold text-red-400">3. Sơ Đồ & Lịch Thi Đấu</h2>
                 <button id="adminStartBtn" onclick="startTournament()" class="hidden bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-bold transition">
@@ -59,8 +62,8 @@
             </div>
         </div>
 
-        <!-- BAN / PICK MAP AREA -->
-        <div id="pickBanSection" class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
+        <!-- MỤC 4: BAN / PICK MAP -->
+        <div id="secPickBan" class="hidden bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
             <h2 class="text-lg font-bold text-yellow-400">4. VCT Pick / Ban Map Phase</h2>
             <p class="text-sm text-gray-400">Chọn thao tác Ban Map dành cho Trận đấu hiện tại:</p>
             <div id="mapPoolButtons" class="flex flex-wrap gap-3"></div>
@@ -71,6 +74,58 @@
     <script>
         let currentUser = null;
         const mapPool = ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"];
+
+        function updateUIFlow() {
+            const secAuth = document.getElementById('secAuth');
+            const secTeam = document.getElementById('secTeam');
+            const secTournament = document.getElementById('secTournament');
+            const secPickBan = document.getElementById('secPickBan');
+            const tokenCard = document.getElementById('tokenCard');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const adminStartBtn = document.getElementById('adminStartBtn');
+
+            if (!currentUser) {
+                // Trạng thái 1: Chưa đăng nhập
+                secAuth.classList.remove('hidden');
+                secTeam.classList.add('hidden');
+                secTournament.classList.add('hidden');
+                secPickBan.classList.add('hidden');
+                tokenCard.classList.add('hidden');
+                logoutBtn.classList.add('hidden');
+                document.getElementById('userStatus').innerText = "Trạng thái: Chưa đăng nhập";
+                return;
+            }
+
+            // Đã đăng nhập
+            secAuth.classList.add('hidden');
+            tokenCard.classList.remove('hidden');
+            logoutBtn.classList.remove('hidden');
+            document.getElementById('tokenDisplay').innerText = currentUser.token;
+            document.getElementById('userStatus').innerText = `Đã đăng nhập: ${currentUser.username} (${currentUser.role || 'USER'})`;
+
+            const isAdmin = currentUser.role === 'ADMIN';
+            const hasTeam = !!currentUser.teamId;
+
+            if (!hasTeam && !isAdmin) {
+                // Trạng thái 2: Đã đăng nhập nhưng chưa có team
+                secTeam.classList.remove('hidden');
+                secTournament.classList.add('hidden');
+                secPickBan.classList.add('hidden');
+            } else {
+                // Trạng thái 3: Đã có team hoặc là Admin -> Mở sơ đồ & Pick/Ban
+                secTeam.classList.add('hidden');
+                secTournament.classList.remove('hidden');
+                secPickBan.classList.remove('hidden');
+
+                if (isAdmin) {
+                    adminStartBtn.classList.remove('hidden');
+                } else {
+                    adminStartBtn.classList.add('hidden');
+                }
+
+                loadDashboard();
+            }
+        }
 
         async function register() {
             const u = document.getElementById('authUsername').value;
@@ -83,7 +138,8 @@
             const data = await res.json();
             if (data.error) return alert(data.error);
             alert("Đăng ký thành công!");
-            setUser(data.user);
+            currentUser = data.user;
+            updateUIFlow();
         }
 
         async function login() {
@@ -96,26 +152,16 @@
             });
             const data = await res.json();
             if (data.error) return alert(data.error);
-            setUser(data.user);
+            currentUser = data.user;
+            updateUIFlow();
         }
 
-        function setUser(user) {
-            currentUser = user;
-            document.getElementById('userStatus').innerText = `Đã đăng nhập: ${user.username} (${user.role || 'USER'})`;
-            document.getElementById('tokenDisplay').innerText = user.token;
-            document.getElementById('tokenCard').classList.remove('hidden');
-
-            if (user.role === 'ADMIN') {
-                document.getElementById('adminStartBtn').classList.remove('hidden');
-            } else {
-                document.getElementById('adminStartBtn').classList.add('hidden');
-            }
-
-            loadDashboard();
+        function logout() {
+            currentUser = null;
+            updateUIFlow();
         }
 
         async function createTeam() {
-            if (!currentUser) return alert("Vui lòng đăng nhập trước!");
             const name = document.getElementById('teamName').value;
             const pass = document.getElementById('teamPass').value;
             const res = await fetch('/api/team/create', {
@@ -126,11 +172,11 @@
             const data = await res.json();
             if (data.error) return alert(data.error);
             alert("Tạo Team thành công!");
-            loadDashboard();
+            currentUser.teamId = data.team.id;
+            updateUIFlow();
         }
 
         async function joinTeam() {
-            if (!currentUser) return alert("Vui lòng đăng nhập trước!");
             const name = document.getElementById('teamName').value;
             const pass = document.getElementById('teamPass').value;
             const res = await fetch('/api/team/join', {
@@ -141,11 +187,11 @@
             const data = await res.json();
             if (data.error) return alert(data.error);
             alert("Đã gia nhập Team!");
-            loadDashboard();
+            currentUser.teamId = data.team.id;
+            updateUIFlow();
         }
 
         async function startTournament() {
-            if (!currentUser || currentUser.role !== 'ADMIN') return alert("Chỉ Admin mới có quyền thực hiện!");
             const res = await fetch('/api/admin/start-tournament', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -164,6 +210,7 @@
             const bracket = document.getElementById('bracketView');
             if (!data.matches || data.matches.length === 0) {
                 bracket.innerHTML = `<p class="text-gray-500 text-sm">Chưa có trận đấu nào.</p>`;
+                renderPickBan(null);
                 return;
             }
 
@@ -214,7 +261,8 @@
             loadDashboard();
         }
 
-        setInterval(loadDashboard, 5000);
+        // Khởi tạo luồng giao diện ban đầu
+        updateUIFlow();
     </script>
 </body>
 </html>
