@@ -31,7 +31,6 @@ function saveDB(db) {
 
 let db = loadDB();
 
-// Khởi tạo Admin mặc định (admin / admin123)
 if (!db.users.find(u => u.username === 'admin')) {
     db.users.push({
         id: 'ADMIN_001',
@@ -51,9 +50,9 @@ function generateToken() {
 // --- AUTH APIs ---
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: "Thiếu thông tin!" });
+    if (!username || !password) return res.status(400).json({ error: "Thawh tur a kim lo!" });
     if (db.users.find(u => u.username === username)) {
-        return res.status(400).json({ error: "Tài khoản đã tồn tại!" });
+        return res.status(400).json({ error: "Taikhoan a awm sa tawh!" });
     }
 
     const user = {
@@ -74,7 +73,7 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     const user = db.users.find(u => u.username === username);
     if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res.status(400).json({ error: "Sai tài khoản hoặc mật khẩu!" });
+        return res.status(400).json({ error: "Taikhoan emaw password a dik lo!" });
     }
     res.json({ success: true, user: { id: user.id, username: user.username, role: user.role || 'USER', token: user.token, teamId: user.teamId } });
 });
@@ -94,7 +93,7 @@ app.get('/api/teams', (req, res) => {
 app.post('/api/team/create', async (req, res) => {
     const { userId, teamName, teamPassword } = req.body;
     const user = db.users.find(u => u.id === userId);
-    if (!user || user.teamId) return res.status(400).json({ error: "Tài khoản đã thuộc team khác!" });
+    if (!user || user.teamId) return res.status(400).json({ error: "Team dangah i awm sa tawh!" });
 
     const team = {
         id: 'TEAM_' + Date.now(),
@@ -116,7 +115,7 @@ app.post('/api/team/join', async (req, res) => {
     const user = db.users.find(u => u.id === userId);
     const team = db.teams.find(t => t.name === teamName);
     if (!user || !team || !(await bcrypt.compare(teamPassword, team.password))) {
-        return res.status(400).json({ error: "Thông tin gia nhập không đúng!" });
+        return res.status(400).json({ error: "Team chhoh dan a dik lo!" });
     }
 
     user.teamId = team.id;
@@ -125,19 +124,7 @@ app.post('/api/team/join', async (req, res) => {
     res.json({ success: true, team });
 });
 
-app.post('/api/admin/delete-team', (req, res) => {
-    const { userId, teamId } = req.body;
-    const user = db.users.find(u => u.id === userId);
-    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có quyền!' });
-
-    db.teams = db.teams.filter(t => t.id !== teamId);
-    db.users.forEach(u => { if (u.teamId === teamId) u.teamId = null; });
-    saveDB(db);
-
-    res.json({ success: true, message: 'Đã giải tán team thành công!' });
-});
-
-// --- DASHBOARD & BRACKET SETUP APIs ---
+// --- DASHBOARD & MATCH APIs ---
 app.get('/api/dashboard', (req, res) => {
     res.json({
         teams: db.teams.map(t => ({ id: t.id, name: t.name, memberCount: t.members.length })),
@@ -148,20 +135,25 @@ app.get('/api/dashboard', (req, res) => {
 app.post('/api/admin/setup-bracket', (req, res) => {
     const { userId, pairings } = req.body;
     const user = db.users.find(u => u.id === userId);
-    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có quyền!' });
+    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin chauhvin tih theih a ni!' });
 
     db.matches = pairings.map((pair, idx) => {
-        const teamA = db.teams.find(t => t.id === pair.teamAId) || { id: 'BYE_A', name: 'Miễn đấu (BYE)' };
-        const teamB = db.teams.find(t => t.id === pair.teamBId) || { id: 'BYE_B', name: 'Miễn đấu (BYE)' };
+        const teamA = db.teams.find(t => t.id === pair.teamAId) || { id: 'BYE_A', name: 'BYE' };
+        const teamB = db.teams.find(t => t.id === pair.teamBId) || { id: 'BYE_B', name: 'BYE' };
 
         return {
             id: `M1_R${idx + 1}`,
             round: 1,
             teamA,
             teamB,
-            status: 'WAITING', // WAITING -> PICKING -> READY -> FINISHED
+            status: 'WAITING',
             currentMapIndex: 0,
-            bo3Maps: [], // Danh sách 3 maps BO3
+            bo3PickState: {
+                map1: null, sideA1: 'CT',
+                map2: null, sideB2: 'CT',
+                map3: null
+            },
+            bo3Maps: [],
             scoreA: 0,
             scoreB: 0
         };
@@ -174,49 +166,48 @@ app.post('/api/admin/setup-bracket', (req, res) => {
 app.post('/api/admin/start-match', (req, res) => {
     const { userId, matchId } = req.body;
     const user = db.users.find(u => u.id === userId);
-    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có quyền!' });
+    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Admin chauhvin tih theih a ni!' });
 
     const match = db.matches.find(m => m.id === matchId);
-    if (!match) return res.status(404).json({ error: "Không tìm thấy trận!" });
+    if (!match) return res.status(404).json({ error: "Trận a awm lo!" });
 
     match.status = 'PICKING';
     saveDB(db);
     res.json({ success: true, match });
 });
 
-// Chốt Ban/Pick Map BO3
-app.post('/api/match/setup-bo3', (req, res) => {
-    const { userId, matchId, map1, sideA_map1, map2, sideB_map2, map3 } = req.body;
+// --- TURN-BASED BO3 MAP PICK API ---
+app.post('/api/match/submit-bo3', (req, res) => {
+    const { userId, matchId, map1, sideA1, map2, sideB2, map3 } = req.body;
 
     const user = db.users.find(u => u.id === userId);
     const match = db.matches.find(m => m.id === matchId);
 
-    if (!user || !match) return res.status(404).json({ error: "Dữ liệu không hợp lệ!" });
-    if (user.teamId !== match.teamA.id && user.teamId !== match.teamB.id) {
-        return res.status(403).json({ error: "Bạn không thuộc 2 đội trong trận này!" });
+    if (!user || !match) return res.status(404).json({ error: "Data a dik lo!" });
+    
+    const isTeamA = user.teamId === match.teamA.id;
+    const isTeamB = user.teamId === match.teamB.id;
+
+    if (!isTeamA && !isTeamB && user.role !== 'ADMIN') {
+        return res.status(403).json({ error: "Match chelh tu team i ni lo!" });
     }
 
     if (map1 === map2 || map2 === map3 || map1 === map3) {
-        return res.status(400).json({ error: "3 Map thi đấu BO3 phải khác nhau!" });
+        return res.status(400).json({ error: "Map 3 te hi an inang tur a ni lo!" });
     }
 
-    // Map 1: Team A Pick -> Team A chọn side
-    const sideA1 = sideA_map1 || 'CT';
-    
-    // Map 2: Team B Pick -> Team B chọn side (Suy ra Side Team A)
-    const sideA2 = (sideB_map2 === 'CT') ? 'TERRORIST' : 'CT';
-
-    // Map 3: Decider -> Random Phe 50/50 cho Team A
-    const sideA3 = Math.random() < 0.5 ? 'CT' : 'TERRORIST';
+    const finalSideA1 = sideA1 || 'CT';
+    const finalSideA2 = (sideB2 === 'CT') ? 'TERRORIST' : 'CT';
+    const finalSideA3 = Math.random() < 0.5 ? 'CT' : 'TERRORIST';
 
     match.bo3Maps = [
-        { mapIndex: 1, name: map1, picker: match.teamA.name, sideA: sideA1, sideB: sideA1 === 'CT' ? 'TERRORIST' : 'CT' },
-        { mapIndex: 2, name: map2, picker: match.teamB.name, sideA: sideA2, sideB: sideB_map2 },
-        { mapIndex: 3, name: map3, picker: "DECIDER (Random Side)", sideA: sideA3, sideB: sideA3 === 'CT' ? 'TERRORIST' : 'CT' }
+        { mapIndex: 1, name: map1, picker: match.teamA.name, sideA: finalSideA1, sideB: finalSideA1 === 'CT' ? 'TERRORIST' : 'CT' },
+        { mapIndex: 2, name: map2, picker: match.teamB.name, sideA: finalSideA2, sideB: sideB2 },
+        { mapIndex: 3, name: map3, picker: "DECIDER (Random Side)", sideA: finalSideA3, sideB: finalSideA3 === 'CT' ? 'TERRORIST' : 'CT' }
     ];
 
     match.status = 'READY';
-    match.currentMapIndex = 0; // Bắt đầu ở Map 1
+    match.currentMapIndex = 0;
     saveDB(db);
 
     res.json({ success: true, match });
@@ -226,7 +217,7 @@ app.post('/api/match/setup-bo3', (req, res) => {
 app.get('/api/cs16/verify-player', (req, res) => {
     const { token } = req.query;
     const user = db.users.find(u => u.token === token);
-    if (!user) return res.json({ success: false, message: "Mã Token không hợp lệ!" });
+    if (!user) return res.json({ success: false, message: "Token a dik lo!" });
 
     const team = db.teams.find(t => t.id === user.teamId);
     const activeMatch = db.matches.find(m => 
@@ -239,15 +230,13 @@ app.get('/api/cs16/verify-player', (req, res) => {
             success: true,
             username: user.username,
             role: user.role || 'USER',
-            teamName: team ? team.name : "Chưa có team",
+            teamName: team ? team.name : "Team a awm lo",
             isPlaying: false
         });
     }
 
     const currentMapInfo = activeMatch.bo3Maps[activeMatch.currentMapIndex] || activeMatch.bo3Maps[0];
     const isTeamA = activeMatch.teamA.id === user.teamId;
-
-    // Xác định chính xác Phe của Player ở Map hiện tại
     const playerSide = isTeamA ? currentMapInfo.sideA : currentMapInfo.sideB;
 
     const teamAMembers = db.users.filter(u => u.teamId === activeMatch.teamA.id).map(u => u.username);
@@ -258,14 +247,14 @@ app.get('/api/cs16/verify-player', (req, res) => {
         username: user.username,
         role: user.role || 'USER',
         teamId: user.teamId,
-        teamName: team ? team.name : "Chưa có team",
+        teamName: team ? team.name : "Team a awm lo",
         isPlaying: true,
         matchInfo: {
             matchId: activeMatch.id,
             currentMapNumber: activeMatch.currentMapIndex + 1,
             map: currentMapInfo.name,
             picker: currentMapInfo.picker,
-            assignedSide: playerSide, // 'CT' hoặc 'TERRORIST'
+            assignedSide: playerSide,
             teamA: { id: activeMatch.teamA.id, name: activeMatch.teamA.name, members: teamAMembers, side: currentMapInfo.sideA },
             teamB: { id: activeMatch.teamB.id, name: activeMatch.teamB.name, members: teamBMembers, side: currentMapInfo.sideB }
         }
