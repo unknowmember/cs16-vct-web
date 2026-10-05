@@ -69,6 +69,12 @@
             <div id="mapPoolButtons" class="flex flex-wrap gap-3"></div>
         </div>
 
+        <!-- MỤC 5: DANH SÁCH TẤT CẢ CÁC ĐỘI -->
+        <div id="secTeamList" class="hidden bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
+            <h2 class="text-lg font-bold text-cyan-400">5. Danh Sách Các Đội Thi Đấu</h2>
+            <div id="teamsContainer" class="grid sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </div>
+
     </div>
 
     <script>
@@ -80,23 +86,23 @@
             const secTeam = document.getElementById('secTeam');
             const secTournament = document.getElementById('secTournament');
             const secPickBan = document.getElementById('secPickBan');
+            const secTeamList = document.getElementById('secTeamList');
             const tokenCard = document.getElementById('tokenCard');
             const logoutBtn = document.getElementById('logoutBtn');
             const adminStartBtn = document.getElementById('adminStartBtn');
 
             if (!currentUser) {
-                // Trạng thái 1: Chưa đăng nhập
                 secAuth.classList.remove('hidden');
                 secTeam.classList.add('hidden');
                 secTournament.classList.add('hidden');
                 secPickBan.classList.add('hidden');
+                secTeamList.classList.add('hidden');
                 tokenCard.classList.add('hidden');
                 logoutBtn.classList.add('hidden');
                 document.getElementById('userStatus').innerText = "Trạng thái: Chưa đăng nhập";
                 return;
             }
 
-            // Đã đăng nhập
             secAuth.classList.add('hidden');
             tokenCard.classList.remove('hidden');
             logoutBtn.classList.remove('hidden');
@@ -107,15 +113,15 @@
             const hasTeam = !!currentUser.teamId;
 
             if (!hasTeam && !isAdmin) {
-                // Trạng thái 2: Đã đăng nhập nhưng chưa có team
                 secTeam.classList.remove('hidden');
                 secTournament.classList.add('hidden');
                 secPickBan.classList.add('hidden');
+                secTeamList.classList.add('hidden');
             } else {
-                // Trạng thái 3: Đã có team hoặc là Admin -> Mở sơ đồ & Pick/Ban
                 secTeam.classList.add('hidden');
                 secTournament.classList.remove('hidden');
                 secPickBan.classList.remove('hidden');
+                secTeamList.classList.remove('hidden');
 
                 if (isAdmin) {
                     adminStartBtn.classList.remove('hidden');
@@ -124,6 +130,7 @@
                 }
 
                 loadDashboard();
+                loadTeamsList();
             }
         }
 
@@ -261,7 +268,66 @@
             loadDashboard();
         }
 
-        // Khởi tạo luồng giao diện ban đầu
+        async function loadTeamsList() {
+            const res = await fetch('/api/teams');
+            const teams = await res.json();
+            const container = document.getElementById('teamsContainer');
+
+            if (!teams || teams.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-500">Chưa có team nào tham gia.</p>`;
+                return;
+            }
+
+            const isAdmin = currentUser && currentUser.role === 'ADMIN';
+
+            container.innerHTML = teams.map(t => {
+                const statusBadge = t.isEliminated 
+                    ? `<span class="bg-red-900/80 text-red-300 text-xs px-2 py-0.5 rounded font-bold">Đã Bị Loại</span>`
+                    : `<span class="bg-green-900/80 text-green-300 text-xs px-2 py-0.5 rounded font-bold">Đang Thi Đấu</span>`;
+
+                const membersList = t.members.length > 0 
+                    ? t.members.map(m => `<span class="inline-block bg-gray-700 px-2 py-0.5 rounded text-xs text-gray-200 mr-1 mb-1">${m}</span>`).join('')
+                    : `<span class="text-xs text-gray-500">Chưa có thành viên</span>`;
+
+                return `
+                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-bold text-lg text-white">${t.name}</h3>
+                                ${statusBadge}
+                            </div>
+                            <p class="text-xs text-gray-400 mb-1">Số trận thắng: <b class="text-yellow-400">${t.wins}</b></p>
+                            <div class="mt-2">
+                                <p class="text-xs text-gray-400 mb-1">Thành viên:</p>
+                                <div class="flex flex-wrap">${membersList}</div>
+                            </div>
+                        </div>
+                        ${isAdmin ? `
+                            <button onclick="disbandTeam('${t.id}')" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white text-xs py-1.5 rounded font-bold transition">
+                                ADMIN: Giải Tán Team
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function disbandTeam(teamId) {
+            if (!confirm("Xác nhận giải tán team này?")) return;
+
+            const res = await fetch('/api/admin/delete-team', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser.id, teamId })
+            });
+
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+
+            alert(data.message);
+            loadTeamsList();
+        }
+
         updateUIFlow();
     </script>
 </body>

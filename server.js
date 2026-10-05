@@ -8,15 +8,15 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static('public'));
 
-// Database trong bộ nhớ RAM
+// Database bộ nhớ RAM
 const db = {
     users: [],       // { id, username, password, role, teamId, token }
-    teams: [],       // { id, name, password, members: [] }
+    teams: [],       // { id, name, password, members: [], wins: 0, isEliminated: false }
     matches: [],     // { id, teamA, teamB, bannedMaps: [], pickedMapA, pickedMapB, deciderMap, sideA, status, scoreA, scoreB }
     mapPool: ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"]
 };
 
-// Tạo sẵn tài khoản Admin mặc định: admin / admin123
+// Tài khoản Admin mặc định: admin / admin123
 const adminPasswordHash = bcrypt.hashSync('Hoangh@171112', 10);
 db.users.push({
     id: 'ADMIN_001',
@@ -69,6 +69,23 @@ app.post('/api/login', async (req, res) => {
 });
 
 // --- TEAM APIs ---
+app.get('/api/teams', (req, res) => {
+    const fullTeams = db.teams.map(t => {
+        const memberUsernames = db.users
+            .filter(u => u.teamId === t.id)
+            .map(u => u.username);
+
+        return {
+            id: t.id,
+            name: t.name,
+            members: memberUsernames,
+            wins: t.wins || 0,
+            isEliminated: t.isEliminated || false
+        };
+    });
+    res.json(fullTeams);
+});
+
 app.post('/api/team/create', async (req, res) => {
     const { userId, teamName, teamPassword } = req.body;
     const user = db.users.find(u => u.id === userId);
@@ -81,7 +98,9 @@ app.post('/api/team/create', async (req, res) => {
         id: 'TEAM_' + Date.now(),
         name: teamName,
         password: hashedPassword,
-        members: [user.id]
+        members: [user.id],
+        wins: 0,
+        isEliminated: false
     };
 
     db.teams.push(team);
@@ -103,6 +122,24 @@ app.post('/api/team/join', async (req, res) => {
     user.teamId = team.id;
     if (!team.members.includes(user.id)) team.members.push(user.id);
     res.json({ success: true, team });
+});
+
+app.post('/api/admin/delete-team', (req, res) => {
+    const { userId, teamId } = req.body;
+    const user = db.users.find(u => u.id === userId);
+
+    if (!user || user.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Chỉ Admin mới có quyền giải tán team!' });
+    }
+
+    db.teams = db.teams.filter(t => t.id !== teamId);
+    db.users.forEach(u => {
+        if (u.teamId === teamId) {
+            u.teamId = null;
+        }
+    });
+
+    res.json({ success: true, message: 'Đã giải tán team thành công!' });
 });
 
 // --- DASHBOARD & ADMIN TOURNAMENT APIs ---
@@ -143,7 +180,6 @@ app.post('/api/admin/start-tournament', (req, res) => {
     res.json({ success: true, matches: db.matches });
 });
 
-// Pick / Ban Map API
 app.post('/api/match/pickban', (req, res) => {
     const { matchId, action, mapName, side } = req.body;
     const match = db.matches.find(m => m.id === matchId);
@@ -169,7 +205,6 @@ app.post('/api/match/pickban', (req, res) => {
 });
 
 // --- CS 1.6 VERIFICATION API ---
-// Plugin CS 1.6 gọi endpoint này: /api/cs16/verify-player?token=<MÃ_20_KÝ_TỰ>
 app.get('/api/cs16/verify-player', (req, res) => {
     const { token } = req.query;
     const user = db.users.find(u => u.token === token);
