@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VCT CS 1.6 Tournament Hub</title>
+    <title>VCT CS 1.6 Tournament Hub (BO3)</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen p-6 font-sans">
@@ -12,7 +12,7 @@
         <!-- HEADER -->
         <header class="flex justify-between items-center bg-gray-900 p-5 rounded-xl border border-gray-800 shadow-lg">
             <div>
-                <h1 class="text-2xl font-black text-red-500 tracking-wider">VALORANT MATCH SYSTEM CS 1.6</h1>
+                <h1 class="text-2xl font-black text-red-500 tracking-wider">VALORANT MATCH SYSTEM CS 1.6 (BO3)</h1>
                 <p id="userStatus" class="text-xs text-gray-400 mt-1">Trạng thái: Chưa đăng nhập</p>
             </div>
             <div id="headerRight" class="flex items-center gap-4">
@@ -54,7 +54,7 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 class="text-lg font-bold text-red-500">3. Sơ Đồ Cây Thi Đấu (Tournament Bracket)</h2>
-                    <p class="text-xs text-gray-400">Xem nhánh đấu và trạng thái trận đấu</p>
+                    <p class="text-xs text-gray-400">Theo dõi danh sách và trạng thái trận đấu BO3 từ trên xuống dưới</p>
                 </div>
                 <button id="adminSetupBtn" onclick="toggleAdminPanel()" class="hidden bg-red-600 hover:bg-red-700 text-white text-xs px-4 py-2 rounded font-bold transition">
                     ADMIN: Xếp Cặp Đấu Vòng 1
@@ -63,7 +63,7 @@
 
             <!-- Panel ADMIN xếp cặp đấu -->
             <div id="adminPanel" class="hidden bg-gray-950 p-4 rounded-lg border border-red-500/50 space-y-3">
-                <h3 class="text-sm font-bold text-yellow-400">Xếp Cặp Đấu Vòng 1 (Từ Trên Xuống Dưới)</h3>
+                <h3 class="text-sm font-bold text-yellow-400">Xếp Cặp Đấu Vòng 1</h3>
                 <div id="pairingSlots" class="space-y-2"></div>
                 <button onclick="saveCustomBracket()" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded text-xs font-bold">
                     Chốt Sơ Đồ & Khởi Tạo
@@ -76,28 +76,60 @@
             </div>
         </div>
 
-        <!-- MỤC 4: CHỌN MAP & PHE (CHỈ HIỂN THỊ CHO 2 ĐỘI ĐANG THI ĐẤU KHI ADMIN CHO BẮT ĐẦU) -->
+        <!-- MỤC 4: CHỌN MAP THI ĐẤU BO3 (CHỈ HIỂN THỊ CHO 2 ĐỘI KHI ADMIN BẮT ĐẦU TRẬN) -->
         <div id="secPickBan" class="hidden bg-gray-900 p-5 rounded-xl border border-yellow-500/50 space-y-4">
-            <h2 class="text-lg font-bold text-yellow-400">4. Chọn Map & Phe Xuất Phát (BO1)</h2>
+            <h2 class="text-lg font-bold text-yellow-400">4. Chọn Map & Phe Xuất Phát Thể Thức BO3</h2>
             <p id="activeMatchNotice" class="text-xs text-green-400 font-bold"></p>
-            <div id="pickMapForm" class="space-y-4 bg-gray-950 p-4 rounded-lg border border-gray-800">
-                <div class="grid sm:grid-cols-2 gap-4">
+
+            <div class="grid md:grid-cols-3 gap-4 bg-gray-950 p-4 rounded-lg border border-gray-800">
+                <!-- MAP 1 (TEAM A PICK) -->
+                <div class="bg-gray-900 p-3 rounded border border-gray-800 space-y-2">
+                    <p class="text-xs font-bold text-cyan-400">MAP 1: <span id="labelTeamAPick">Team A Pick</span></p>
                     <div>
-                        <label class="block text-xs text-gray-400 mb-1">1. Chọn Map Thi Đấu:</label>
-                        <select id="selectMapName" class="w-full bg-gray-800 text-sm p-2 rounded border border-gray-700 text-white"></select>
+                        <label class="text-[11px] text-gray-400 block mb-1">Chọn Map 1:</label>
+                        <select id="map1Select" class="w-full bg-gray-800 text-xs p-2 rounded border border-gray-700 text-white"></select>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-400 mb-1">2. Team A Xuất Phát Phe:</label>
-                        <select id="selectSideA" class="w-full bg-gray-800 text-sm p-2 rounded border border-gray-700 text-white">
+                        <label class="text-[11px] text-gray-400 block mb-1"><span id="labelTeamASide">Team A</span> Chọn Phe Khởi Đầu:</label>
+                        <select id="sideA1Select" class="w-full bg-gray-800 text-xs p-2 rounded border border-gray-700 text-white">
                             <option value="CT">Counter-Terrorists (CT)</option>
                             <option value="TERRORIST">Terrorists (T)</option>
                         </select>
                     </div>
                 </div>
-                <button onclick="submitMapSelection()" class="bg-yellow-600 hover:bg-yellow-500 text-black font-bold px-5 py-2 rounded text-sm transition">
-                    Chốt Map & Phân Phe
-                </button>
+
+                <!-- MAP 2 (TEAM B PICK) -->
+                <div class="bg-gray-900 p-3 rounded border border-gray-800 space-y-2">
+                    <p class="text-xs font-bold text-red-400">MAP 2: <span id="labelTeamBPick">Team B Pick</span></p>
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">Chọn Map 2:</label>
+                        <select id="map2Select" class="w-full bg-gray-800 text-xs p-2 rounded border border-gray-700 text-white"></select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1"><span id="labelTeamBSide">Team B</span> Chọn Phe Khởi Đầu:</label>
+                        <select id="sideB2Select" class="w-full bg-gray-800 text-xs p-2 rounded border border-gray-700 text-white">
+                            <option value="CT">Counter-Terrorists (CT)</option>
+                            <option value="TERRORIST">Terrorists (T)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- MAP 3 (DECIDER) -->
+                <div class="bg-gray-900 p-3 rounded border border-gray-800 space-y-2">
+                    <p class="text-xs font-bold text-yellow-400">MAP 3: Decider Map</p>
+                    <div>
+                        <label class="text-[11px] text-gray-400 block mb-1">Chọn Map 3 (Decider):</label>
+                        <select id="map3Select" class="w-full bg-gray-800 text-xs p-2 rounded border border-gray-700 text-white"></select>
+                    </div>
+                    <div class="p-2 bg-gray-800/50 rounded text-[11px] text-gray-400 border border-dashed border-gray-700">
+                        * Phe khởi đầu cho Map Decider sẽ được Hệ thống <b>Random 50/50</b> tự động khi chốt.
+                    </div>
+                </div>
             </div>
+
+            <button onclick="submitBO3Selection()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-bold py-2.5 rounded text-sm transition">
+                Chốt 3 Map Thi Đấu BO3 & Phân Phe
+            </button>
         </div>
 
         <!-- MỤC 5: DANH SÁCH CÁC ĐỘI -->
@@ -270,7 +302,7 @@
             const data = await res.json();
             if (data.error) return alert(data.error);
 
-            alert("Đã khởi tạo cây sơ đồ thi đấu!");
+            alert("Đã khởi tạo cây sơ đồ thi đấu BO3!");
             document.getElementById('adminPanel').classList.add('hidden');
             loadDashboard();
         }
@@ -284,7 +316,7 @@
             const data = await res.json();
             if (data.error) return alert(data.error);
 
-            alert("Đã mở lượt Pick Map cho 2 đội trong trận này!");
+            alert("Đã mở Pick Map BO3 cho 2 đội trong trận này!");
             loadDashboard();
         }
 
@@ -299,11 +331,8 @@
 
             const isAdmin = currentUser && currentUser.role === 'ADMIN';
 
-            if (isAdmin) {
-                adminSetupBtn.classList.remove('hidden');
-            } else {
-                adminSetupBtn.classList.add('hidden');
-            }
+            if (isAdmin) adminSetupBtn.classList.remove('hidden');
+            else adminSetupBtn.classList.add('hidden');
 
             if (matches.length === 0) {
                 bracketTree.innerHTML = `<p class="text-gray-500 text-sm">Chưa khởi tạo sơ đồ thi đấu.</p>`;
@@ -311,9 +340,8 @@
                 return;
             }
 
-            // Render Vòng 1 theo thứ tự từ trên xuống dưới
             let round1Html = `<div class="flex flex-col gap-6 justify-center">
-                <p class="text-xs font-bold text-cyan-400 uppercase tracking-widest text-center border-b border-gray-800 pb-1">Vòng 1</p>`;
+                <p class="text-xs font-bold text-cyan-400 uppercase tracking-widest text-center border-b border-gray-800 pb-1">Vòng 1 (BO3)</p>`;
 
             activeMatchForUser = null;
 
@@ -325,28 +353,37 @@
                 }
 
                 let statusBadge = `<span class="text-gray-400">Đang chờ</span>`;
-                if (m.status === 'PICKING') statusBadge = `<span class="text-yellow-400 animate-pulse">Đang Chọn Map</span>`;
+                if (m.status === 'PICKING') statusBadge = `<span class="text-yellow-400 animate-pulse">Đang Chọn Map BO3</span>`;
                 if (m.status === 'READY') statusBadge = `<span class="text-green-400 font-bold">Sẵn Sàng CS 1.6</span>`;
 
+                let mapsDetailHtml = `<div class="text-[10px] text-gray-500 mt-1">Chưa chốt Map BO3</div>`;
+                if (m.bo3Maps && m.bo3Maps.length === 3) {
+                    mapsDetailHtml = `
+                        <div class="mt-2 text-[11px] space-y-1 bg-gray-950 p-2 rounded border border-gray-800">
+                            <p class="text-gray-300"><b>M1 (${m.teamA.name} Pick):</b> ${m.bo3Maps[0].name} <span class="text-yellow-400">(${m.teamA.name}: ${m.bo3Maps[0].sideA})</span></p>
+                            <p class="text-gray-300"><b>M2 (${m.teamB.name} Pick):</b> ${m.bo3Maps[1].name} <span class="text-yellow-400">(${m.teamB.name}: ${m.bo3Maps[1].sideB})</span></p>
+                            <p class="text-gray-300"><b>M3 (Decider):</b> ${m.bo3Maps[2].name} <span class="text-yellow-400">(Random Side)</span></p>
+                        </div>
+                    `;
+                }
+
                 round1Html += `
-                    <div class="bg-gray-800 w-72 rounded-lg border border-gray-700 overflow-hidden shadow-lg">
+                    <div class="bg-gray-800 w-80 rounded-lg border border-gray-700 overflow-hidden shadow-lg">
                         <div class="bg-gray-900 px-3 py-1 text-[10px] text-gray-400 font-bold flex justify-between border-b border-gray-800">
-                            <span>${m.id}</span>
+                            <span>${m.id} (BO3)</span>
                             <span>${statusBadge}</span>
                         </div>
                         <div class="p-3 space-y-2">
                             <div class="flex justify-between items-center text-xs font-bold text-white">
                                 <span>${m.teamA.name}</span>
-                                <span class="text-gray-400">${m.sideA === 'CT' ? '(CT)' : '(T)'}</span>
+                                <span class="text-cyan-400">Tỷ số: ${m.scoreA}</span>
                             </div>
                             <div class="border-t border-gray-700/50"></div>
                             <div class="flex justify-between items-center text-xs font-bold text-white">
                                 <span>${m.teamB.name}</span>
-                                <span class="text-gray-400">${m.sideA === 'CT' ? '(T)' : '(CT)'}</span>
+                                <span class="text-cyan-400">Tỷ số: ${m.scoreB}</span>
                             </div>
-                            <div class="mt-2 text-[11px] text-gray-400 border-t border-gray-800 pt-1 flex justify-between items-center">
-                                <span>Map: <b class="text-yellow-400">${m.pickedMap || 'Chưa chọn'}</b></span>
-                            </div>
+                            ${mapsDetailHtml}
                             ${isAdmin && m.status === 'WAITING' ? `
                                 <button onclick="startMatchByAdmin('${m.id}')" class="w-full mt-2 bg-red-600 hover:bg-red-700 text-white text-xs py-1 rounded font-bold transition">
                                     ADMIN: Bắt Đầu Trận Này
@@ -358,53 +395,57 @@
             });
             round1Html += `</div>`;
 
-            // Nhánh Chung Kết
-            let finalsHtml = `
-                <div class="flex flex-col justify-center items-center gap-2">
-                    <div class="w-8 h-[2px] bg-red-500/40"></div>
-                </div>
-                <div class="flex flex-col gap-6 justify-center">
-                    <p class="text-xs font-bold text-yellow-400 uppercase tracking-widest text-center border-b border-gray-800 pb-1">Chung Kết</p>
-                    <div class="bg-gray-800/60 w-60 rounded-lg border border-dashed border-yellow-500/40 p-4 text-center">
-                        <p class="text-xs text-yellow-400 font-bold">TBD vs TBD</p>
-                        <p class="text-[10px] text-gray-500 mt-1">Chờ thắng Vòng 1</p>
-                    </div>
-                </div>
-            `;
+            bracketTree.innerHTML = round1Html;
 
-            bracketTree.innerHTML = round1Html + finalsHtml;
-
-            // HIỂN THỊ MỤC 4 (KHI ĐÚNG DỊP): Đội của User nằm trong trận đấu đang ở trạng thái PICKING
+            // HIỂN THỊ MỤC 4 KHI ADMIN ĐÃ MỞ TRẬN CHO 2 ĐỘI
             if (activeMatchForUser) {
                 secPickBan.classList.remove('hidden');
-                document.getElementById('activeMatchNotice').innerText = `Đội bạn đang thi đấu trận ${activeMatchForUser.id}: ${activeMatchForUser.teamA.name} VS ${activeMatchForUser.teamB.name}`;
-                document.getElementById('selectMapName').innerHTML = mapPool.map(m => `<option value="${m}">${m}</option>`).join('');
+                document.getElementById('activeMatchNotice').innerText = `Đội bạn đang đấu trận ${activeMatchForUser.id}: ${activeMatchForUser.teamA.name} VS ${activeMatchForUser.teamB.name}`;
+                document.getElementById('labelTeamAPick').innerText = activeMatchForUser.teamA.name;
+                document.getElementById('labelTeamASide').innerText = activeMatchForUser.teamA.name;
+                document.getElementById('labelTeamBPick').innerText = activeMatchForUser.teamB.name;
+                document.getElementById('labelTeamBSide').innerText = activeMatchForUser.teamB.name;
+
+                const optionsHtml = mapPool.map((m, idx) => `<option value="${m}" ${idx===0?'selected':''}>${m}</option>`).join('');
+                document.getElementById('map1Select').innerHTML = mapPool.map((m, idx) => `<option value="${m}" ${idx===0?'selected':''}>${m}</option>`).join('');
+                document.getElementById('map2Select').innerHTML = mapPool.map((m, idx) => `<option value="${m}" ${idx===1?'selected':''}>${m}</option>`).join('');
+                document.getElementById('map3Select').innerHTML = mapPool.map((m, idx) => `<option value="${m}" ${idx===2?'selected':''}>${m}</option>`).join('');
             } else {
                 secPickBan.classList.add('hidden');
             }
         }
 
-        async function submitMapSelection() {
-            if (!activeMatchForUser) return alert("Hiện không có trận đấu nào yêu cầu chọn Map!");
+        async function submitBO3Selection() {
+            if (!activeMatchForUser) return alert("Không có trận đấu nào yêu cầu chọn Map!");
 
-            const mapName = document.getElementById('selectMapName').value;
-            const chosenSideA = document.getElementById('selectSideA').value;
+            const map1 = document.getElementById('map1Select').value;
+            const sideA_map1 = document.getElementById('sideA1Select').value;
 
-            const res = await fetch('/api/match/select-map', {
+            const map2 = document.getElementById('map2Select').value;
+            const sideB_map2 = document.getElementById('sideB2Select').value;
+
+            const map3 = document.getElementById('map3Select').value;
+
+            if (map1 === map2 || map2 === map3 || map1 === map3) {
+                return alert("3 Map thi đấu BO3 không được trùng nhau!");
+            }
+
+            const res = await fetch('/api/match/setup-bo3', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: currentUser.id,
                     matchId: activeMatchForUser.id,
-                    mapName,
-                    chosenSideA
+                    map1, sideA_map1,
+                    map2, sideB_map2,
+                    map3
                 })
             });
 
             const data = await res.json();
             if (data.error) return alert(data.error);
 
-            alert(`Đã chốt Map ${mapName} thành công! Mời các thành viên vào CS 1.6.`);
+            alert("Đã chốt xong 3 Map BO3 & Phân phe thành công!");
             loadDashboard();
         }
 
