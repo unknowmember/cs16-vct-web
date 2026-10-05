@@ -2,30 +2,53 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.static('public'));
 
-// Database bộ nhớ RAM
-const db = {
-    users: [],       // { id, username, password, role, teamId, token }
-    teams: [],       // { id, name, password, members: [], wins: 0, isEliminated: false }
-    matches: [],     // { id, round, teamA, teamB, pickedMap, pickType, sideA, status, scoreA, scoreB }
-    mapPool: ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"]
-};
+const DB_FILE = path.join(__dirname, 'db.json');
 
-// Tài khoản Admin mặc định: admin / admin123
-const adminPasswordHash = bcrypt.hashSync('Hoangh@171112', 10);
-db.users.push({
-    id: 'ADMIN_001',
-    username: 'admin',
-    password: adminPasswordHash,
-    role: 'ADMIN',
-    teamId: null,
-    token: crypto.randomBytes(10).toString('hex').toUpperCase()
-});
+// Hàm đọc dữ liệu từ file db.json
+function loadDB() {
+    if (!fs.existsSync(DB_FILE)) {
+        const initialDB = { users: [], teams: [], matches: [] };
+        fs.writeFileSync(DB_FILE, JSON.stringify(initialDB, null, 2));
+        return initialDB;
+    }
+    try {
+        const data = fs.readFileSync(DB_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (e) {
+        return { users: [], teams: [], matches: [] };
+    }
+}
+
+// Hàm ghi dữ liệu xuống file db.json
+function saveDB(db) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
+
+let db = loadDB();
+
+// Khởi tạo Admin mặc định nếu chưa có (admin / admin123)
+if (!db.users.find(u => u.username === 'admin')) {
+    const adminPasswordHash = bcrypt.hashSync('Hoangh@171112', 10);
+    db.users.push({
+        id: 'ADMIN_001',
+        username: 'admin',
+        password: adminPasswordHash,
+        role: 'ADMIN',
+        teamId: null,
+        token: crypto.randomBytes(10).toString('hex').toUpperCase()
+    });
+    saveDB(db);
+}
+
+const mapPool = ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"];
 
 function generateToken() {
     return crypto.randomBytes(10).toString('hex').toUpperCase();
@@ -50,6 +73,7 @@ app.post('/api/register', async (req, res) => {
     };
     
     db.users.push(user);
+    saveDB(db);
     res.json({ success: true, user: { id: user.id, username: user.username, role: user.role, token: user.token, teamId: null } });
 });
 
@@ -83,7 +107,7 @@ app.get('/api/teams', (req, res) => {
 app.post('/api/team/create', async (req, res) => {
     const { userId, teamName, teamPassword } = req.body;
     const user = db.users.find(u => u.id === userId);
-    if (!user || user.teamId) return res.status(400).json({ error: "Thao tác không hợp lệ hoặc đã có team!" });
+    if (!user || user.teamId) return res.status(400).json({ error: "Thao tác không hợp lệ hoặc đã thuộc team khác!" });
 
     const hashedPassword = await bcrypt.hash(teamPassword, 10);
     const team = {
@@ -97,6 +121,7 @@ app.post('/api/team/create', async (req, res) => {
 
     db.teams.push(team);
     user.teamId = team.id;
+    saveDB(db);
     res.json({ success: true, team });
 });
 
@@ -110,6 +135,7 @@ app.post('/api/team/join', async (req, res) => {
 
     user.teamId = team.id;
     if (!team.members.includes(user.id)) team.members.push(user.id);
+    saveDB(db);
     res.json({ success: true, team });
 });
 
@@ -123,6 +149,7 @@ app.post('/api/admin/delete-team', (req, res) => {
 
     db.teams = db.teams.filter(t => t.id !== teamId);
     db.users.forEach(u => { if (u.teamId === teamId) u.teamId = null; });
+    saveDB(db);
 
     res.json({ success: true, message: 'Đã giải tán team thành công!' });
 });
@@ -135,7 +162,7 @@ app.get('/api/dashboard', (req, res) => {
     });
 });
 
-// Admin xếp cặp đấu Vòng 1
+// Admin Xếp Cặp Đấu Vòng 1
 app.post('/api/admin/setup-bracket', (req, res) => {
     const { userId, pairings } = req.body;
     const user = db.users.find(u => u.id === userId);
@@ -154,42 +181,62 @@ app.post('/api/admin/setup-bracket', (req, res) => {
             teamA,
             teamB,
             pickedMap: null,
-            pickType: null,   // 'PICK' hoặc 'DECIDER'
-            sideA: 'CT',       // 'CT' hoặc 'TERRORIST'
-            status: 'PENDING', // 'PENDING', 'READY', 'FINISHED'
+            sideA: 'CT',
+            status: 'WAITING', // WAITING -> PICKING (Khi Admin cho bắt đầu) -> READY -> FINISHED
             scoreA: 0,
             scoreB: 0
         };
     });
 
+    saveDB(db);
     res.json({ success: true, matches: db.matches });
 });
 
-// Pick Map & Chọn Phe / Random Phe
-app.post('/api/match/select-map', (req, res) => {
-    const { matchId, mapName, pickType, chosenSideA } = req.body; 
-    // pickType: 'PICK' hoặc 'DECIDER'
-    // chosenSideA: 'CT' hoặc 'TERRORIST' (Nếu là PICK)
+// Admin Cho Bắt Đầu Trận
+app.post('/api/admin/start-match', (req, res) => {
+    const { userId, matchId } = req.body;
+    const user = db.users.find(u => u.id === userId);
+
+    if (!user || user.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Chỉ Admin mới có quyền bắt đầu trận đấu!' });
+    }
 
     const match = db.matches.find(m => m.id === matchId);
     if (!match) return res.status(404).json({ error: "Không tìm thấy trận đấu!" });
 
-    match.pickedMap = mapName;
-    match.pickType = pickType;
+    match.status = 'PICKING'; // Chuyển trạng thái sang cho phép 2 team Pick Map
+    saveDB(db);
 
-    if (pickType === 'PICK') {
-        // Nếu là Map Pick -> Dùng phe xuất phát do người chọn quyết định
-        match.sideA = chosenSideA || 'CT';
-    } else if (pickType === 'DECIDER') {
-        // Nếu là Map Decider -> Random ngẫu nhiên phe xuất phát
-        match.sideA = Math.random() < 0.5 ? 'CT' : 'TERRORIST';
-    }
-
-    match.status = 'READY';
     res.json({ success: true, match });
 });
 
-// --- CS 1.6 VERIFICATION API (Giữ nguyên phân chia Team cho Server Game) ---
+// Pick Map & Chọn Phe (Chỉ cho 2 team trong trận đấu)
+app.post('/api/match/select-map', (req, res) => {
+    const { userId, matchId, mapName, chosenSideA } = req.body; 
+
+    const user = db.users.find(u => u.id === userId);
+    const match = db.matches.find(m => m.id === matchId);
+
+    if (!user || !match) return res.status(404).json({ error: "Dữ liệu không hợp lệ!" });
+
+    // Kiểm tra user có thuộc 1 trong 2 team đang đấu hay không
+    if (user.teamId !== match.teamA.id && user.teamId !== match.teamB.id) {
+        return res.status(403).json({ error: "Bạn không thuộc 2 đội đang thi đấu trận này!" });
+    }
+
+    if (match.status !== 'PICKING') {
+        return res.status(400).json({ error: "Trận đấu chưa được Admin bắt đầu hoặc đã chốt xong!" });
+    }
+
+    match.pickedMap = mapName;
+    match.sideA = chosenSideA || 'CT';
+    match.status = 'READY'; // Sẵn sàng thi đấu trong CS 1.6
+    saveDB(db);
+
+    res.json({ success: true, match });
+});
+
+// --- CS 1.6 VERIFICATION API ---
 app.get('/api/cs16/verify-player', (req, res) => {
     const { token } = req.query;
     const user = db.users.find(u => u.token === token);
@@ -198,7 +245,7 @@ app.get('/api/cs16/verify-player', (req, res) => {
     const team = db.teams.find(t => t.id === user.teamId);
     const activeMatch = db.matches.find(m => 
         (m.teamA.id === user.teamId || m.teamB.id === user.teamId) && 
-        (m.status === 'READY' || m.status === 'PENDING')
+        (m.status === 'READY' || m.status === 'PICKING')
     );
 
     if (!activeMatch) {
@@ -212,12 +259,8 @@ app.get('/api/cs16/verify-player', (req, res) => {
     }
 
     const isTeamA = activeMatch.teamA.id === user.teamId;
-    
-    // Tính toán phe xuất phát chính xác từng người chơi
-    // Nếu SideA là 'CT' -> Team A đóng vai CT, Team B đóng vai TERRORIST (và ngược lại)
     const playerSide = isTeamA ? activeMatch.sideA : (activeMatch.sideA === 'CT' ? 'TERRORIST' : 'CT');
 
-    // Lấy toàn bộ danh sách tài khoản thuộc Team A và Team B để Server CS 1.6 chia đội chính xác
     const teamAMembers = db.users.filter(u => u.teamId === activeMatch.teamA.id).map(u => u.username);
     const teamBMembers = db.users.filter(u => u.teamId === activeMatch.teamB.id).map(u => u.username);
 
@@ -231,8 +274,7 @@ app.get('/api/cs16/verify-player', (req, res) => {
         matchInfo: {
             matchId: activeMatch.id,
             map: activeMatch.pickedMap || "de_dust2",
-            pickType: activeMatch.pickType,
-            assignedSide: playerSide, // 'CT' hoặc 'TERRORIST' cho đúng người dùng này
+            assignedSide: playerSide,
             teamA: { id: activeMatch.teamA.id, name: activeMatch.teamA.name, members: teamAMembers, startSide: activeMatch.sideA },
             teamB: { id: activeMatch.teamB.id, name: activeMatch.teamB.name, members: teamBMembers, startSide: activeMatch.sideA === 'CT' ? 'TERRORIST' : 'CT' }
         }
