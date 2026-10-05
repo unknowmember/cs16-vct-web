@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>VCT CS1.6 Tournament Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-6">
+    <div class="max-w-6xl mx-auto space-y-6">
+        <h1 class="text-3xl font-bold text-red-500 border-b border-gray-700 pb-3">VALORANT MATCH SYSTEM - CS 1.6</h1>
+
+        <div class="bg-gray-800 p-4 rounded-lg">
+            <h2 class="text-xl font-semibold mb-3">1. Tạo danh sách Đội thi đấu</h2>
+            <div class="flex gap-2 mb-3">
+                <input id="teamInput" type="text" placeholder="Tên các đội (phân cách bằng dấu phẩy: TeamA, TeamB, TeamC)" class="flex-1 p-2 bg-gray-700 rounded border border-gray-600">
+                <button onclick="setupTeams()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-bold">Khởi tạo Sơ đồ</button>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 p-4 rounded-lg">
+            <h2 class="text-xl font-semibold mb-3">2. Điều khiển Trận đấu & Pick Map</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium">Đội A (Chủ nhà)</label>
+                    <input id="activeTeamA" type="text" value="Team Alpha" class="w-full p-2 bg-gray-700 rounded mt-1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Đội B (Khách)</label>
+                    <input id="activeTeamB" type="text" value="Team Beta" class="w-full p-2 bg-gray-700 rounded mt-1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Phe Đội A xuất phát</label>
+                    <select id="activeSideA" class="w-full p-2 bg-gray-700 rounded mt-1">
+                        <option value="CT">Counter-Terrorists (CT)</option>
+                        <option value="T">Terrorists (T)</option>
+                    </select>
+                </div>
+            </div>
+
+            <label class="block text-sm font-medium mb-2">Chọn Map thi đấu:</label>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button onclick="selectMap('de_dust2')" class="bg-gray-700 hover:bg-blue-600 px-3 py-2 rounded">de_dust2</button>
+                <button onclick="selectMap('de_inferno')" class="bg-gray-700 hover:bg-blue-600 px-3 py-2 rounded">de_inferno</button>
+                <button onclick="selectMap('de_nuke')" class="bg-gray-700 hover:bg-blue-600 px-3 py-2 rounded">de_nuke</button>
+                <button onclick="selectMap('de_train')" class="bg-gray-700 hover:bg-blue-600 px-3 py-2 rounded">de_train</button>
+                <button onclick="selectMap('de_aztec')" class="bg-gray-700 hover:bg-blue-600 px-3 py-2 rounded">de_aztec</button>
+            </div>
+            
+            <p class="mb-3">Map đang chọn: <span id="selectedMapDisplay" class="font-bold text-yellow-400">de_dust2</span></p>
+
+            <button onclick="sendToCS16()" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded text-lg font-bold">
+                GỬI THÔNG TIN SANG CS 1.6 SERVER
+            </button>
+        </div>
+
+        <div class="bg-gray-800 p-4 rounded-lg">
+            <h2 class="text-xl font-semibold mb-3">3. Cây giải đấu</h2>
+            <div id="bracketDisplay" class="bg-gray-700 p-3 rounded">
+                <div id="upperMatches" class="space-y-2 text-sm">Chưa khởi tạo</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedMap = "de_dust2";
+
+        function selectMap(mapName) {
+            selectedMap = mapName;
+            document.getElementById('selectedMapDisplay').innerText = mapName;
+        }
+
+        async function setupTeams() {
+            const raw = document.getElementById('teamInput').value;
+            const teams = raw.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            const res = await fetch('/api/tournament/setup', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ teams })
+            });
+            const data = await res.json();
+            renderBracket(data.tournamentData);
+        }
+
+        async function sendToCS16() {
+            const teamA = document.getElementById('activeTeamA').value;
+            const teamB = document.getElementById('activeTeamB').value;
+            const sideA = document.getElementById('activeSideA').value;
+
+            const res = await fetch('/api/match/set-active', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ teamA, teamB, map: selectedMap, sideA })
+            });
+            if (res.ok) alert("Đã cập nhật trận đấu thành công!");
+        }
+
+        function renderBracket(data) {
+            const ubContainer = document.getElementById('upperMatches');
+            ubContainer.innerHTML = data.upperBracket.map(m => `
+                <div class="bg-gray-800 p-2 rounded border border-gray-600">
+                    <b>${m.team1}</b> vs <b>${m.team2}</b>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
