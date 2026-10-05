@@ -3,172 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VCT CS 1.6 Tournament Hub (BO3)</title>
+    <title>VCT CS 1.6 Esports Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Teko&family=Titillium+Web:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        body {
-            background: #090b10;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .vct-glass {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .vct-card-glow {
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
-        }
+        body { background-color: #080a0f; font-family: 'Titillium Web', sans-serif; color: #e2e8f0; }
+        .font-teko { font-family: 'Teko', sans-serif; }
+        .vct-border { border: 1px solid rgba(239, 68, 68, 0.3); }
+        .vct-glass { background: rgba(13, 17, 23, 0.85); backdrop-filter: blur(16px); }
+        .vct-glow { box-shadow: 0 0 25px rgba(239, 68, 68, 0.2); }
+        .bracket-line { position: relative; }
+        .bracket-line::after { content: ''; position: absolute; right: -2rem; top: 50%; width: 2rem; height: 2px; background: #334155; }
     </style>
 </head>
-<body class="text-gray-100 min-h-screen p-4 md:p-8">
-    <div class="max-w-7xl mx-auto space-y-8">
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto space-y-6">
 
         <!-- HEADER -->
-        <header class="vct-glass p-6 rounded-2xl border-l-4 border-l-red-500 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-                <div class="flex items-center gap-3">
-                    <span class="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded tracking-widest uppercase">VCT CS 1.6</span>
-                    <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-400 to-yellow-400">BO3 TOURNAMENT SYSTEM</h1>
+        <header class="vct-glass p-5 rounded-xl border-b-2 border-red-500 shadow-2xl flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-600 text-black font-black font-teko text-2xl px-3 py-0.5 rounded tracking-wider">VCT</div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wider uppercase text-white">CS 1.6 TOURNAMENT HUD</h1>
+                    <p id="userStatus" class="text-xs text-slate-400 font-mono">Chưa đăng nhập</p>
                 </div>
-                <p id="userStatus" class="text-xs text-gray-400 mt-1 font-mono">Trạng thái: Chưa đăng nhập</p>
             </div>
-            <div id="headerRight" class="flex items-center gap-4">
-                <div id="tokenCard" class="hidden bg-slate-900/90 border border-amber-500/30 px-4 py-2 rounded-xl text-right">
-                    <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">CS 1.6 Token</p>
-                    <p id="tokenDisplay" class="font-mono text-amber-400 font-bold tracking-widest text-base"></p>
-                </div>
-                <button id="logoutBtn" onclick="logout()" class="hidden bg-red-950/40 hover:bg-red-900/60 text-red-400 px-4 py-2 rounded-xl text-xs font-bold border border-red-800/50 transition">
-                    Đăng Xuất
-                </button>
+            <div id="tokenCard" class="hidden bg-slate-900 border border-slate-700 px-4 py-1.5 rounded text-right">
+                <span class="text-[10px] text-slate-400 uppercase tracking-widest block">PLAYER TOKEN</span>
+                <span id="tokenDisplay" class="font-mono text-yellow-400 font-bold text-sm"></span>
             </div>
         </header>
 
         <!-- SEC 1: AUTH -->
-        <div id="secAuth" class="max-w-md mx-auto vct-glass p-8 rounded-2xl border border-slate-800 space-y-5 vct-card-glow">
-            <h2 class="text-xl font-black text-red-500 uppercase tracking-wider text-center">Tài Khoản Player</h2>
-            <div class="space-y-3">
-                <input id="authUsername" type="text" placeholder="Tên tài khoản" class="w-full bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 focus:outline-none focus:border-red-500 text-sm">
-                <input id="authPassword" type="password" placeholder="Mật khẩu" class="w-full bg-slate-900/80 p-3 rounded-xl border border-slate-700/80 focus:outline-none focus:border-red-500 text-sm">
-            </div>
-            <div class="flex gap-3 pt-2">
-                <button onclick="login()" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-bold text-sm transition shadow-lg shadow-red-600/30">Đăng Nhập</button>
-                <button onclick="register()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 py-3 rounded-xl font-bold text-sm transition">Đăng Ký</button>
+        <div id="secAuth" class="max-w-md mx-auto vct-glass p-6 rounded-xl border border-slate-800 space-y-4">
+            <h2 class="text-lg font-black text-red-500 uppercase tracking-wider text-center">ĐĂNG NHẬP / ĐĂNG KÝ</h2>
+            <input id="authUsername" type="text" placeholder="Tên tài khoản" class="w-full bg-slate-900 p-2.5 rounded border border-slate-700 text-sm focus:border-red-500 outline-none">
+            <input id="authPassword" type="password" placeholder="Mật khẩu" class="w-full bg-slate-900 p-2.5 rounded border border-slate-700 text-sm focus:border-red-500 outline-none">
+            <div class="flex gap-2">
+                <button onclick="login()" class="flex-1 bg-red-600 hover:bg-red-500 font-bold py-2 rounded text-sm transition">ĐĂNG NHẬP</button>
+                <button onclick="register()" class="flex-1 bg-slate-800 hover:bg-slate-700 font-bold py-2 rounded text-sm transition">ĐĂNG KÝ</button>
             </div>
         </div>
 
         <!-- SEC 2: TEAM SETUP -->
-        <div id="secTeam" class="hidden max-w-md mx-auto vct-glass p-8 rounded-2xl border border-slate-800 space-y-5">
-            <h2 class="text-xl font-black text-amber-400 uppercase tracking-wider text-center">Tham Gia Đội Thi Đấu</h2>
-            <p class="text-xs text-gray-400 text-center">Tạo team mới hoặc nhập thông tin gia nhập team đã có:</p>
-            <div class="space-y-3">
-                <input id="teamName" type="text" placeholder="Tên Team" class="w-full bg-slate-900 p-3 rounded-xl border border-slate-700 text-sm focus:outline-none focus:border-amber-500">
-                <input id="teamPass" type="password" placeholder="Mật khẩu Team" class="w-full bg-slate-900 p-3 rounded-xl border border-slate-700 text-sm focus:outline-none focus:border-amber-500">
-            </div>
-            <div class="flex gap-3 pt-2">
-                <button onclick="createTeam()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm transition">Tạo Team</button>
-                <button onclick="joinTeam()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-3 rounded-xl font-bold text-sm transition">Vào Team</button>
+        <div id="secTeam" class="hidden max-w-md mx-auto vct-glass p-6 rounded-xl border border-slate-800 space-y-4">
+            <h2 class="text-lg font-black text-yellow-400 uppercase tracking-wider text-center">TẠO HẶC VÀO TEAM</h2>
+            <input id="teamName" type="text" placeholder="Tên Team" class="w-full bg-slate-900 p-2.5 rounded border border-slate-700 text-sm focus:border-yellow-500 outline-none">
+            <input id="teamPass" type="password" placeholder="Mật khẩu Team" class="w-full bg-slate-900 p-2.5 rounded border border-slate-700 text-sm focus:border-yellow-500 outline-none">
+            <div class="flex gap-2">
+                <button onclick="createTeam()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 font-bold py-2 rounded text-sm transition">TẠO TEAM</button>
+                <button onclick="joinTeam()" class="flex-1 bg-yellow-600 hover:bg-yellow-500 font-bold py-2 rounded text-sm transition">VÀO TEAM</button>
             </div>
         </div>
 
-        <!-- SEC 3: BRACKET -->
-        <div id="secTournament" class="hidden vct-glass p-6 md:p-8 rounded-2xl border border-slate-800 space-y-6">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="text-xl font-black text-red-500 tracking-wider">SƠ ĐỒ CÂY THI ĐẤU (TOURNAMENT BRACKET)</h2>
-                    <p class="text-xs text-gray-400 mt-0.5">Theo dõi danh sách và trạng thái các trận đấu thể thức BO3</p>
+        <!-- SEC 3: BRACKET HUD (SƠ ĐỒ CÂY CHUYÊN NGHIỆP) -->
+        <div id="secTournament" class="hidden vct-glass p-6 rounded-xl border border-slate-800 space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
+                    <h2 class="font-teko text-2xl font-black text-white tracking-wider">TOURNAMENT BRACKET HUD</h2>
                 </div>
-                <button id="adminSetupBtn" onclick="toggleAdminPanel()" class="hidden bg-red-600 hover:bg-red-500 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition">
-                    ADMIN: Xếp Cặp Đấu
-                </button>
+                <button id="adminSetupBtn" onclick="toggleAdminPanel()" class="hidden bg-red-600 hover:bg-red-500 text-xs px-3 py-1.5 rounded font-bold uppercase">ADMIN: Xếp Cặp Đấu</button>
             </div>
 
-            <!-- ADMIN PANEL -->
-            <div id="adminPanel" class="hidden bg-slate-950/90 p-5 rounded-xl border border-red-500/40 space-y-4">
-                <h3 class="text-sm font-bold text-amber-400">Xếp Cặp Đấu Vòng 1</h3>
+            <!-- ADMIN SETUP PANEL -->
+            <div id="adminPanel" class="hidden bg-slate-950 p-4 rounded-lg border border-red-500/50 space-y-3">
+                <h3 class="text-xs font-bold text-yellow-400 uppercase">Xếp Cặp Đấu Vòng 1</h3>
                 <div id="pairingSlots" class="space-y-2"></div>
-                <button onclick="saveCustomBracket()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold transition">
-                    Chốt Sơ Đồ & Bắt Đầu
-                </button>
+                <button onclick="saveCustomBracket()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-2 rounded text-xs font-bold uppercase">Chốt Sơ Đồ & Khởi Tạo</button>
             </div>
 
-            <!-- BRACKET DISPLAY -->
+            <!-- BRACKET TREE DISPLAY -->
             <div class="overflow-x-auto pb-4">
                 <div id="bracketTree" class="flex items-center gap-8 min-w-[700px]"></div>
             </div>
         </div>
 
-        <!-- SEC 4: PICK & BAN BO3 -->
-        <div id="secPickBan" class="hidden vct-glass p-6 md:p-8 rounded-2xl border-2 border-amber-500/50 space-y-6">
-            <div>
-                <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">MAP BAN/PICK SYSTEM</span>
-                <h2 class="text-2xl font-black text-white mt-1">Chọn Map & Phe Xuất Phát (BO3)</h2>
-                <p id="activeMatchNotice" class="text-xs text-emerald-400 font-bold mt-1"></p>
+        <!-- SEC 4: CHỈ HIỂN THỊ 1 Ô DÀNH CHO TEAM ĐANG PICK MAP -->
+        <div id="secPickBan" class="hidden vct-glass p-6 rounded-xl border-2 border-yellow-500/60 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-teko text-2xl font-black text-yellow-400 tracking-wider">MAP PICK & BAN SYSTEM</h2>
+                <span id="turnBadge" class="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-3 py-1 rounded-full border border-yellow-500/40">LƯỢT PICK MAP</span>
             </div>
+            
+            <p id="activeMatchNotice" class="text-xs text-slate-300 font-mono"></p>
 
-            <div class="grid md:grid-cols-3 gap-6">
-                <!-- MAP 1 (TEAM A PICK) -->
-                <div id="cardMap1" class="bg-slate-900/90 p-5 rounded-xl border border-slate-700/80 space-y-4 transition">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span class="text-xs font-bold text-cyan-400">MAP 1</span>
-                        <span id="labelTeamAPick" class="text-xs font-bold text-slate-300">Team A Pick</span>
-                    </div>
-                    <div>
-                        <label class="text-[11px] text-gray-400 block mb-1 font-semibold">Chọn Map 1:</label>
-                        <select id="map1Select" class="w-full bg-slate-800 text-xs p-2.5 rounded-lg border border-slate-700 text-white font-medium focus:outline-none"></select>
-                    </div>
-                    <div>
-                        <label class="text-[11px] text-gray-400 block mb-1 font-semibold"><span id="labelTeamASide">Team A</span> chọn Phe Khởi Đầu:</label>
-                        <select id="sideA1Select" class="w-full bg-slate-800 text-xs p-2.5 rounded-lg border border-slate-700 text-white font-medium focus:outline-none">
-                            <option value="CT">Counter-Terrorists (CT)</option>
-                            <option value="TERRORIST">Terrorists (T)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- MAP 2 (TEAM B PICK) -->
-                <div id="cardMap2" class="bg-slate-900/90 p-5 rounded-xl border border-slate-700/80 space-y-4 transition">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span class="text-xs font-bold text-red-400">MAP 2</span>
-                        <span id="labelTeamBPick" class="text-xs font-bold text-slate-300">Team B Pick</span>
-                    </div>
-                    <div>
-                        <label class="text-[11px] text-gray-400 block mb-1 font-semibold">Chọn Map 2:</label>
-                        <select id="map2Select" class="w-full bg-slate-800 text-xs p-2.5 rounded-lg border border-slate-700 text-white font-medium focus:outline-none"></select>
-                    </div>
-                    <div>
-                        <label class="text-[11px] text-gray-400 block mb-1 font-semibold"><span id="labelTeamBSide">Team B</span> chọn Phe Khởi Đầu:</label>
-                        <select id="sideB2Select" class="w-full bg-slate-800 text-xs p-2.5 rounded-lg border border-slate-700 text-white font-medium focus:outline-none">
-                            <option value="CT">Counter-Terrorists (CT)</option>
-                            <option value="TERRORIST">Terrorists (T)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- MAP 3 (DECIDER) -->
-                <div id="cardMap3" class="bg-slate-900/90 p-5 rounded-xl border border-slate-700/80 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span class="text-xs font-bold text-amber-400">MAP 3</span>
-                        <span class="text-xs font-bold text-slate-300">Decider Map</span>
-                    </div>
-                    <div>
-                        <label class="text-[11px] text-gray-400 block mb-1 font-semibold">Chọn Map Decider:</label>
-                        <select id="map3Select" class="w-full bg-slate-800 text-xs p-2.5 rounded-lg border border-slate-700 text-white font-medium focus:outline-none"></select>
-                    </div>
-                    <div class="p-3 bg-slate-950/60 rounded-lg text-[11px] text-gray-400 border border-dashed border-slate-800 leading-relaxed">
-                        * Phe khởi đầu cho Decider Map sẽ do Hệ thống <b>Random 50/50</b> tự động phân chia.
-                    </div>
-                </div>
-            </div>
-
-            <button onclick="submitBO3Selection()" class="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black py-3.5 rounded-xl text-sm transition shadow-lg shadow-amber-500/20 uppercase tracking-wider">
-                Chốt 3 Map Thi Đấu BO3 & Phân Phe
-            </button>
+            <!-- SINGLE ACTIVE PICK CARD -->
+            <div id="activePickCard" class="bg-slate-950 p-5 rounded-lg border border-slate-800 space-y-4"></div>
         </div>
 
         <!-- SEC 5: TEAMS -->
-        <div id="secTeamList" class="hidden vct-glass p-6 md:p-8 rounded-2xl border border-slate-800 space-y-6">
-            <h2 class="text-xl font-black text-cyan-400 tracking-wider">DANH SÁCH CÁC ĐỘI THAM GIA</h2>
-            <div id="teamsContainer" class="grid sm:grid-cols-2 md:grid-cols-3 gap-5"></div>
+        <div id="secTeamList" class="hidden vct-glass p-6 rounded-xl border border-slate-800 space-y-4">
+            <h2 class="font-teko text-2xl font-black text-cyan-400 tracking-wider">DANH SÁCH ĐỘI THAM GIA</h2>
+            <div id="teamsContainer" class="grid sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
         </div>
 
     </div>
@@ -180,90 +107,60 @@
         const mapPool = ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"];
 
         function updateUIFlow() {
-            const secAuth = document.getElementById('secAuth');
-            const secTeam = document.getElementById('secTeam');
-            const secTournament = document.getElementById('secTournament');
-            const secTeamList = document.getElementById('secTeamList');
-            const tokenCard = document.getElementById('tokenCard');
-            const logoutBtn = document.getElementById('logoutBtn');
-
             if (!currentUser) {
-                secAuth.classList.remove('hidden');
-                secTeam.classList.add('hidden');
-                secTournament.classList.add('hidden');
+                document.getElementById('secAuth').classList.remove('hidden');
+                document.getElementById('secTeam').classList.add('hidden');
+                document.getElementById('secTournament').classList.add('hidden');
                 document.getElementById('secPickBan').classList.add('hidden');
-                secTeamList.classList.add('hidden');
-                tokenCard.classList.add('hidden');
-                logoutBtn.classList.add('hidden');
-                document.getElementById('userStatus').innerText = "Trạng thái: Chưa đăng nhập";
+                document.getElementById('secTeamList').classList.add('hidden');
+                document.getElementById('tokenCard').classList.add('hidden');
                 return;
             }
 
-            secAuth.classList.add('hidden');
-            tokenCard.classList.remove('hidden');
-            logoutBtn.classList.remove('hidden');
+            document.getElementById('secAuth').classList.add('hidden');
+            document.getElementById('tokenCard').classList.remove('hidden');
             document.getElementById('tokenDisplay').innerText = currentUser.token;
-            document.getElementById('userStatus').innerText = `Player: ${currentUser.username} (${currentUser.role || 'USER'})`;
+            document.getElementById('userStatus').innerText = `Player: ${currentUser.username} (${currentUser.role})`;
 
             const isAdmin = currentUser.role === 'ADMIN';
             const hasTeam = !!currentUser.teamId;
 
             if (!hasTeam && !isAdmin) {
-                secTeam.classList.remove('hidden');
-                secTournament.classList.add('hidden');
-                document.getElementById('secPickBan').classList.add('hidden');
-                secTeamList.classList.add('hidden');
+                document.getElementById('secTeam').classList.remove('hidden');
+                document.getElementById('secTournament').classList.add('hidden');
             } else {
-                secTeam.classList.add('hidden');
-                secTournament.classList.remove('hidden');
-                secTeamList.classList.remove('hidden');
-
+                document.getElementById('secTeam').classList.add('hidden');
+                document.getElementById('secTournament').classList.remove('hidden');
+                document.getElementById('secTeamList').classList.remove('hidden');
                 loadDashboard();
                 loadTeamsList();
             }
         }
 
-        async function register() {
-            const u = document.getElementById('authUsername').value;
-            const p = document.getElementById('authPassword').value;
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ username: u, password: p })
-            });
-            const data = await res.json();
-            if (data.error) return alert(data.error);
-            currentUser = data.user;
-            updateUIFlow();
-        }
-
         async function login() {
             const u = document.getElementById('authUsername').value;
             const p = document.getElementById('authPassword').value;
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ username: u, password: p })
-            });
+            const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: u, password: p }) });
             const data = await res.json();
             if (data.error) return alert(data.error);
             currentUser = data.user;
             updateUIFlow();
         }
 
-        function logout() {
-            currentUser = null;
+        async function register() {
+            const u = document.getElementById('authUsername').value;
+            const p = document.getElementById('authPassword').value;
+            const res = await fetch('/api/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: u, password: p }) });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+            currentUser = data.user;
             updateUIFlow();
         }
 
         async function createTeam() {
             const name = document.getElementById('teamName').value;
             const pass = document.getElementById('teamPass').value;
-            const res = await fetch('/api/team/create', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass })
-            });
+            const res = await fetch('/api/team/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass }) });
             const data = await res.json();
             if (data.error) return alert(data.error);
             currentUser.teamId = data.team.id;
@@ -273,11 +170,7 @@
         async function joinTeam() {
             const name = document.getElementById('teamName').value;
             const pass = document.getElementById('teamPass').value;
-            const res = await fetch('/api/team/join', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass })
-            });
+            const res = await fetch('/api/team/join', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass }) });
             const data = await res.json();
             if (data.error) return alert(data.error);
             currentUser.teamId = data.team.id;
@@ -287,7 +180,6 @@
         async function toggleAdminPanel() {
             const panel = document.getElementById('adminPanel');
             panel.classList.toggle('hidden');
-
             if (!panel.classList.contains('hidden')) {
                 const res = await fetch('/api/teams');
                 allTeams = await res.json();
@@ -300,17 +192,14 @@
             const matchCount = Math.max(1, Math.ceil(allTeams.length / 2));
             let html = '';
             for (let i = 0; i < matchCount; i++) {
-                const optionsA = allTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-                const optionsB = allTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-
+                const opts = allTeams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
                 html += `
-                    <div class="flex items-center gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
+                    <div class="flex items-center gap-2 bg-slate-900 p-2 rounded border border-slate-800">
                         <span class="text-xs font-bold text-slate-400 w-16">Trận ${i + 1}:</span>
-                        <select id="slot_${i}_A" class="bg-slate-800 text-xs p-2 rounded-lg text-white border border-slate-700 flex-1">${optionsA}</select>
+                        <select id="slot_${i}_A" class="bg-slate-800 text-xs p-1.5 rounded text-white flex-1">${opts}</select>
                         <span class="text-xs font-bold text-red-500">VS</span>
-                        <select id="slot_${i}_B" class="bg-slate-800 text-xs p-2 rounded-lg text-white border border-slate-700 flex-1">${optionsB}</select>
-                    </div>
-                `;
+                        <select id="slot_${i}_B" class="bg-slate-800 text-xs p-1.5 rounded text-white flex-1">${opts}</select>
+                    </div>`;
             }
             container.innerHTML = html;
         }
@@ -318,38 +207,20 @@
         async function saveCustomBracket() {
             const matchCount = Math.max(1, Math.ceil(allTeams.length / 2));
             const pairings = [];
-
             for (let i = 0; i < matchCount; i++) {
-                const teamAId = document.getElementById(`slot_${i}_A`).value;
-                const teamBId = document.getElementById(`slot_${i}_B`).value;
-                if (teamAId === teamBId) return alert(`Trận ${i + 1} bị trùng team!`);
-                pairings.push({ teamAId, teamBId });
+                pairings.push({ teamAId: document.getElementById(`slot_${i}_A`).value, teamBId: document.getElementById(`slot_${i}_B`).value });
             }
-
-            const res = await fetch('/api/admin/setup-bracket', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: currentUser.id, pairings })
-            });
-
+            const res = await fetch('/api/admin/setup-bracket', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id, pairings }) });
             const data = await res.json();
             if (data.error) return alert(data.error);
-
-            alert("Đã khởi tạo sơ đồ thi đấu BO3!");
             document.getElementById('adminPanel').classList.add('hidden');
             loadDashboard();
         }
 
         async function startMatchByAdmin(matchId) {
-            const res = await fetch('/api/admin/start-match', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: currentUser.id, matchId })
-            });
+            const res = await fetch('/api/admin/start-match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id, matchId }) });
             const data = await res.json();
             if (data.error) return alert(data.error);
-
-            alert("Đã mở Map Pick BO3 cho trận đấu này!");
             loadDashboard();
         }
 
@@ -360,65 +231,65 @@
 
             const bracketTree = document.getElementById('bracketTree');
             const adminSetupBtn = document.getElementById('adminSetupBtn');
-            const secPickBan = document.getElementById('secPickBan');
-
             const isAdmin = currentUser && currentUser.role === 'ADMIN';
 
             if (isAdmin) adminSetupBtn.classList.remove('hidden');
-            else adminSetupBtn.classList.add('hidden');
 
             if (matches.length === 0) {
-                bracketTree.innerHTML = `<p class="text-slate-500 text-sm">Chưa khởi tạo sơ đồ thi đấu.</p>`;
-                secPickBan.classList.add('hidden');
+                bracketTree.innerHTML = `<p class="text-slate-500 text-xs">Chưa có trận đấu nào.</p>`;
+                document.getElementById('secPickBan').classList.add('hidden');
                 return;
             }
 
-            let round1Html = `<div class="flex flex-col gap-6 justify-center">
-                <p class="text-xs font-bold text-cyan-400 uppercase tracking-widest text-center border-b border-slate-800 pb-2">Vòng 1 (BO3)</p>`;
-
+            let html = `<div class="flex flex-col gap-6">`;
             activeMatchForUser = null;
 
             matches.forEach(m => {
-                const isMyTeamInMatch = currentUser && currentUser.teamId && (currentUser.teamId === m.teamA.id || currentUser.teamId === m.teamB.id);
+                const isMyTeamA = currentUser.teamId === m.teamA.id;
+                const isMyTeamB = currentUser.teamId === m.teamB.id;
 
-                if (m.status === 'PICKING' && isMyTeamInMatch) {
+                if ((m.status === 'PICKING_MAP1' || m.status === 'PICKING_MAP2') && (isMyTeamA || isMyTeamB || isAdmin)) {
                     activeMatchForUser = m;
                 }
 
-                let statusBadge = `<span class="text-slate-400">Đang chờ</span>`;
-                if (m.status === 'PICKING') statusBadge = `<span class="text-amber-400 font-bold animate-pulse">Đang Pick Map BO3</span>`;
-                if (m.status === 'READY') statusBadge = `<span class="text-emerald-400 font-bold">Sẵn Sàng</span>`;
+                // HUD CHUYÊN NGHIỆP CỦA CÂY SƠ ĐỒ
+                let statusBadge = `<span class="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase">Chờ Khởi Động</span>`;
+                if (m.status === 'PICKING_MAP1') statusBadge = `<span class="bg-amber-950 text-amber-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-amber-800/50 animate-pulse">${m.teamA.name} Pick Map 1</span>`;
+                if (m.status === 'PICKING_MAP2') statusBadge = `<span class="bg-amber-950 text-amber-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-amber-800/50 animate-pulse">${m.teamB.name} Pick Map 2</span>`;
+                if (m.status === 'READY') statusBadge = `<span class="bg-emerald-950 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-emerald-800/50">Sẵn Sàng BO3</span>`;
 
-                let mapsDetailHtml = `<div class="text-[11px] text-slate-500 mt-2 italic">Chưa chốt Map BO3</div>`;
-                if (m.bo3Maps && m.bo3Maps.length === 3) {
-                    mapsDetailHtml = `
-                        <div class="mt-3 text-[11px] space-y-1 bg-slate-950 p-2.5 rounded-lg border border-slate-800 font-mono">
-                            <p class="text-slate-300"><b>M1 (${m.teamA.name}):</b> ${m.bo3Maps[0].name} <span class="text-amber-400">(${m.bo3Maps[0].sideA})</span></p>
-                            <p class="text-slate-300"><b>M2 (${m.teamB.name}):</b> ${m.bo3Maps[1].name} <span class="text-amber-400">(${m.bo3Maps[1].sideB})</span></p>
-                            <p class="text-slate-300"><b>M3 (Decider):</b> ${m.bo3Maps[2].name} <span class="text-amber-400">(Random)</span></p>
-                        </div>
-                    `;
+                // HIỂN THỊ ĐỦ 3 MAP TRÊN SƠ ĐỒ CÂY
+                let mapsListHtml = `<div class="text-[10px] text-slate-500 italic mt-2">Đang chờ Ban/Pick Map...</div>`;
+                if (m.bo3Maps && m.bo3Maps.length > 0) {
+                    mapsListHtml = `<div class="mt-2 space-y-1 bg-slate-950 p-2 rounded border border-slate-800/80 font-mono text-[11px]">`;
+                    m.bo3Maps.forEach((mp, i) => {
+                        mapsListHtml += `<div class="flex justify-between items-center text-slate-300">
+                            <span><b>M${i+1}:</b> ${mp.name}</span>
+                            <span class="text-amber-400 text-[10px] font-bold">(${mp.picker}): A[${mp.sideA}] - B[${mp.sideB}]</span>
+                        </div>`;
+                    });
+                    mapsListHtml += `</div>`;
                 }
 
-                round1Html += `
-                    <div class="bg-slate-900/90 w-80 rounded-xl border border-slate-700/80 overflow-hidden shadow-xl">
-                        <div class="bg-slate-950 px-4 py-2 text-[11px] text-slate-400 font-bold flex justify-between border-b border-slate-800">
-                            <span>${m.id} (BO3)</span>
-                            <span>${statusBadge}</span>
+                html += `
+                    <div class="w-80 bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden hover:border-slate-700 transition">
+                        <div class="bg-slate-950 px-3 py-1.5 flex justify-between items-center border-b border-slate-800">
+                            <span class="font-mono text-[11px] text-slate-400 font-bold">${m.id}</span>
+                            ${statusBadge}
                         </div>
-                        <div class="p-4 space-y-2">
-                            <div class="flex justify-between items-center text-sm font-bold text-white">
-                                <span>${m.teamA.name}</span>
-                                <span class="text-cyan-400 font-mono">Tỷ số: ${m.scoreA}</span>
+                        <div class="p-3 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-sm text-white">${m.teamA.name}</span>
+                                <span class="font-teko text-xl font-bold text-cyan-400">${m.scoreA}</span>
                             </div>
-                            <div class="border-t border-slate-800"></div>
-                            <div class="flex justify-between items-center text-sm font-bold text-white">
-                                <span>${m.teamB.name}</span>
-                                <span class="text-cyan-400 font-mono">Tỷ số: ${m.scoreB}</span>
+                            <div class="border-t border-slate-800/60"></div>
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-sm text-white">${m.teamB.name}</span>
+                                <span class="font-teko text-xl font-bold text-cyan-400">${m.scoreB}</span>
                             </div>
-                            ${mapsDetailHtml}
+                            ${mapsListHtml}
                             ${isAdmin && m.status === 'WAITING' ? `
-                                <button onclick="startMatchByAdmin('${m.id}')" class="w-full mt-3 bg-red-600 hover:bg-red-500 text-white text-xs py-2 rounded-lg font-bold transition">
+                                <button onclick="startMatchByAdmin('${m.id}')" class="w-full mt-2 bg-red-600 hover:bg-red-500 text-white text-xs py-1 rounded font-bold uppercase transition">
                                     ADMIN: Mở Pick Map
                                 </button>
                             ` : ''}
@@ -426,72 +297,114 @@
                     </div>
                 `;
             });
-            round1Html += `</div>`;
+            html += `</div>`;
+            bracketTree.innerHTML = html;
 
-            bracketTree.innerHTML = round1Html;
+            // HANDLE PICK/BAN SECTION FOR USER & ADMIN
+            renderPickSection();
+        }
 
-            // HANDLE BO3 PICK/BAN VISIBILITY PER TEAM ROLE
-            if (activeMatchForUser) {
-                secPickBan.classList.remove('hidden');
-                document.getElementById('activeMatchNotice').innerText = `Đội bạn đang tham gia trận ${activeMatchForUser.id}: ${activeMatchForUser.teamA.name} VS ${activeMatchForUser.teamB.name}`;
-                document.getElementById('labelTeamAPick').innerText = activeMatchForUser.teamA.name;
-                document.getElementById('labelTeamASide').innerText = activeMatchForUser.teamA.name;
-                document.getElementById('labelTeamBPick').innerText = activeMatchForUser.teamB.name;
-                document.getElementById('labelTeamBSide').innerText = activeMatchForUser.teamB.name;
+        function renderPickSection() {
+            const secPickBan = document.getElementById('secPickBan');
+            const activePickCard = document.getElementById('activePickCard');
+            const notice = document.getElementById('activeMatchNotice');
 
-                const optionsHtml = (selectedIdx) => mapPool.map((m, idx) => `<option value="${m}" ${idx===selectedIdx?'selected':''}>${m}</option>`).join('');
-                document.getElementById('map1Select').innerHTML = optionsHtml(0);
-                document.getElementById('map2Select').innerHTML = optionsHtml(1);
-                document.getElementById('map3Select').innerHTML = optionsHtml(2);
-
-                const isTeamA = currentUser.teamId === activeMatchForUser.teamA.id;
-                const isTeamB = currentUser.teamId === activeMatchForUser.teamB.id;
-
-                // Disable inputs depending on team membership
-                document.getElementById('map1Select').disabled = !isTeamA && !isAdmin;
-                document.getElementById('sideA1Select').disabled = !isTeamA && !isAdmin;
-
-                document.getElementById('map2Select').disabled = !isTeamB && !isAdmin;
-                document.getElementById('sideB2Select').disabled = !isTeamB && !isAdmin;
-
-                document.getElementById('cardMap1').style.opacity = (isTeamA || isAdmin) ? '1' : '0.5';
-                document.getElementById('cardMap2').style.opacity = (isTeamB || isAdmin) ? '1' : '0.5';
-            } else {
+            if (!activeMatchForUser) {
                 secPickBan.classList.add('hidden');
+                return;
+            }
+
+            secPickBan.classList.remove('hidden');
+            const m = activeMatchForUser;
+            const isTeamA = currentUser.teamId === m.teamA.id;
+            const isTeamB = currentUser.teamId === m.teamB.id;
+            const isAdmin = currentUser.role === 'ADMIN';
+
+            notice.innerText = `Trận đấu: ${m.teamA.name} VS ${m.teamB.name}`;
+
+            // ADMIN VÀ NGƯỜI XEM CÓ CHẾ ĐỘ XEM CHỦ ĐỘNG
+            if (isAdmin || (!isTeamA && !isTeamB)) {
+                let adminMsg = m.status === 'PICKING_MAP1' 
+                    ? `Đang chờ <b>${m.teamA.name}</b> chọn Map 1...` 
+                    : `Đang chờ <b>${m.teamB.name}</b> chọn Map 2... (Map 3 Decider sẽ tự sinh)`;
+                activePickCard.innerHTML = `<div class="p-4 text-center text-sm text-yellow-400 bg-slate-900 rounded border border-yellow-500/30">${adminMsg}</div>`;
+                return;
+            }
+
+            // XỬ LÝ LƯỢT CHỌN CHỈ HIỂN THỊ 1 Ô DUY NHẤT
+            if (m.status === 'PICKING_MAP1') {
+                if (isTeamA) {
+                    const opts = mapPool.map(mp => `<option value="${mp}">${mp}</option>`).join('');
+                    activePickCard.innerHTML = `
+                        <p class="text-xs font-bold text-cyan-400 uppercase">Lượt Team Bạn (${m.teamA.name}): Chọn Map 1</p>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">Chọn Map 1:</label>
+                                <select id="inputMap1" class="w-full bg-slate-900 p-2 rounded border border-slate-700 text-xs">${opts}</select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">Chọn Phe Khởi Đầu Map 1:</label>
+                                <select id="inputSideA1" class="w-full bg-slate-900 p-2 rounded border border-slate-700 text-xs">
+                                    <option value="CT">Counter-Terrorists (CT)</option>
+                                    <option value="TERRORIST">Terrorists (T)</option>
+                                </select>
+                            </div>
+                            <button onclick="submitPickMap1()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded text-xs uppercase">Xác Nhận Map 1</button>
+                        </div>`;
+                } else {
+                    activePickCard.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">Đang chờ <b>${m.teamA.name}</b> chọn Map 1...</div>`;
+                }
+            } else if (m.status === 'PICKING_MAP2') {
+                if (isTeamB) {
+                    const map1Name = m.bo3Maps[0].name;
+                    const availMaps = mapPool.filter(mp => mp !== map1Name);
+                    const opts = availMaps.map(mp => `<option value="${mp}">${mp}</option>`).join('');
+
+                    activePickCard.innerHTML = `
+                        <p class="text-xs font-bold text-red-400 uppercase">Lượt Team Bạn (${m.teamB.name}): Chọn Map 2</p>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">Chọn Map 2 (Khác ${map1Name}):</label>
+                                <select id="inputMap2" class="w-full bg-slate-900 p-2 rounded border border-slate-700 text-xs">${opts}</select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">Chọn Phe Khởi Đầu Map 2:</label>
+                                <select id="inputSideB2" class="w-full bg-slate-900 p-2 rounded border border-slate-700 text-xs">
+                                    <option value="CT">Counter-Terrorists (CT)</option>
+                                    <option value="TERRORIST">Terrorists (T)</option>
+                                </select>
+                            </div>
+                            <button onclick="submitPickMap2()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 rounded text-xs uppercase">Xác Nhận Map 2 & Tự Động Tạo Decider Map 3</button>
+                        </div>`;
+                } else {
+                    activePickCard.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">Đang chờ <b>${m.teamB.name}</b> chọn Map 2...</div>`;
+                }
             }
         }
 
-        async function submitBO3Selection() {
-            if (!activeMatchForUser) return alert("Không có trận đấu nào yêu cầu chọn Map!");
-
-            const map1 = document.getElementById('map1Select').value;
-            const sideA1 = document.getElementById('sideA1Select').value;
-
-            const map2 = document.getElementById('map2Select').value;
-            const sideB2 = document.getElementById('sideB2Select').value;
-
-            const map3 = document.getElementById('map3Select').value;
-
-            if (map1 === map2 || map2 === map3 || map1 === map3) {
-                return alert("3 Map thi đấu BO3 không được trùng nhau!");
-            }
-
-            const res = await fetch('/api/match/submit-bo3', {
+        async function submitPickMap1() {
+            const map1 = document.getElementById('inputMap1').value;
+            const sideA1 = document.getElementById('inputSideA1').value;
+            const res = await fetch('/api/match/pick-map1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: currentUser.id,
-                    matchId: activeMatchForUser.id,
-                    map1, sideA1,
-                    map2, sideB2,
-                    map3
-                })
+                body: JSON.stringify({ userId: currentUser.id, matchId: activeMatchForUser.id, map1, sideA1 })
             });
-
             const data = await res.json();
             if (data.error) return alert(data.error);
+            loadDashboard();
+        }
 
-            alert("Đã chốt 3 Map BO3 thành công!");
+        async function submitPickMap2() {
+            const map2 = document.getElementById('inputMap2').value;
+            const sideB2 = document.getElementById('inputSideB2').value;
+            const res = await fetch('/api/match/pick-map2', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser.id, matchId: activeMatchForUser.id, map2, sideB2 })
+            });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
             loadDashboard();
         }
 
@@ -499,33 +412,12 @@
             const res = await fetch('/api/teams');
             const teams = await res.json();
             const container = document.getElementById('teamsContainer');
-
-            if (!teams || teams.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-500">Chưa có team nào tham gia.</p>`;
-                return;
-            }
-
-            container.innerHTML = teams.map(t => {
-                const membersList = t.members.length > 0 
-                    ? t.members.map(m => `<span class="inline-block bg-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300 mr-1 mb-1 border border-slate-700">${m}</span>`).join('')
-                    : `<span class="text-xs text-slate-500">Chưa có thành viên</span>`;
-
-                return `
-                    <div class="bg-slate-900/90 p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-center mb-3">
-                                <h3 class="font-black text-lg text-white">${t.name}</h3>
-                                <span class="bg-emerald-950 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold border border-emerald-800/50">Active</span>
-                            </div>
-                            <p class="text-xs text-slate-400 mb-2">Thắng: <b class="text-amber-400 font-mono">${t.wins}</b></p>
-                            <div class="mt-3">
-                                <p class="text-[11px] text-slate-400 mb-1 font-semibold">Thành viên:</p>
-                                <div class="flex flex-wrap">${membersList}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            container.innerHTML = teams.map(t => `
+                <div class="bg-slate-900 p-3 rounded border border-slate-800">
+                    <h3 class="font-bold text-white text-sm">${t.name}</h3>
+                    <p class="text-[11px] text-slate-400">Thành viên: ${t.members.join(', ') || 'Trống'}</p>
+                </div>
+            `).join('');
         }
 
         updateUIFlow();
