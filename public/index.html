@@ -2,45 +2,46 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VCT CS 1.6 Tournament Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen p-6">
+<body class="bg-gray-950 text-gray-100 min-h-screen p-6 font-sans">
     <div class="max-w-7xl mx-auto space-y-6">
 
-        <!-- HEADER & MA TOKEN -->
-        <header class="flex justify-between items-center bg-gray-900 p-4 rounded-xl border border-gray-800">
+        <!-- HEADER -->
+        <header class="flex justify-between items-center bg-gray-900 p-5 rounded-xl border border-gray-800 shadow-lg">
             <div>
                 <h1 class="text-2xl font-black text-red-500 tracking-wider">VALORANT MATCH SYSTEM CS 1.6</h1>
-                <p id="userStatus" class="text-xs text-gray-400">Chưa đăng nhập</p>
+                <p id="userStatus" class="text-xs text-gray-400 mt-1">Trạng thái: Chưa đăng nhập</p>
             </div>
-            <div id="tokenCard" class="hidden bg-gray-800 border border-red-500/30 px-4 py-2 rounded-lg text-right">
-                <p class="text-xs text-gray-400">Mã CS 1.6 Token của bạn:</p>
+            <div id="tokenCard" class="hidden bg-gray-800 border border-red-500/40 px-4 py-2 rounded-lg text-right">
+                <p class="text-xs text-gray-400">Mã CS 1.6 Token (Nhập trong game):</p>
                 <p id="tokenDisplay" class="font-mono text-yellow-400 font-bold tracking-widest text-lg"></p>
             </div>
         </header>
 
         <!-- AUTH & TEAM SETUP -->
         <div id="authSection" class="grid md:grid-cols-2 gap-6">
-            <!-- ĐĂNG KÝ / ĐĂNG NHẬP -->
+            <!-- TÀI KHOẢN -->
             <div class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
                 <h2 class="text-lg font-bold text-red-400">1. Tài Khoản</h2>
-                <input id="authUsername" type="text" placeholder="Tên tài khoản" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700">
-                <input id="authPassword" type="password" placeholder="Mật khẩu" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700">
+                <input id="authUsername" type="text" placeholder="Tên tài khoản" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
+                <input id="authPassword" type="password" placeholder="Mật khẩu" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
                 <div class="flex gap-2">
-                    <button onclick="login()" class="flex-1 bg-blue-600 hover:bg-blue-700 py-2.5 rounded font-bold">Đăng Nhập</button>
-                    <button onclick="register()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-2.5 rounded font-bold">Đăng Ký</button>
+                    <button onclick="login()" class="flex-1 bg-blue-600 hover:bg-blue-700 py-2.5 rounded font-bold transition">Đăng Nhập</button>
+                    <button onclick="register()" class="flex-1 bg-gray-700 hover:bg-gray-600 py-2.5 rounded font-bold transition">Đăng Ký</button>
                 </div>
             </div>
 
             <!-- TẠO / VÀO TEAM -->
             <div class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
                 <h2 class="text-lg font-bold text-red-400">2. Đội Thi Đấu</h2>
-                <input id="teamName" type="text" placeholder="Tên Team" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700">
-                <input id="teamPass" type="password" placeholder="Mật khẩu Team" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700">
+                <input id="teamName" type="text" placeholder="Tên Team" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
+                <input id="teamPass" type="password" placeholder="Mật khẩu Team" class="w-full bg-gray-800 p-2.5 rounded border border-gray-700 focus:outline-none focus:border-red-500">
                 <div class="flex gap-2">
-                    <button onclick="createTeam()" class="flex-1 bg-green-600 hover:bg-green-700 py-2.5 rounded font-bold">Tạo Team Mới</button>
-                    <button onclick="joinTeam()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-2.5 rounded font-bold">Vào Team Bằng Pass</button>
+                    <button onclick="createTeam()" class="flex-1 bg-green-600 hover:bg-green-700 py-2.5 rounded font-bold transition">Tạo Team Mới</button>
+                    <button onclick="joinTeam()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-2.5 rounded font-bold transition">Vào Team Bằng Pass</button>
                 </div>
             </div>
         </div>
@@ -49,7 +50,9 @@
         <div class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-bold text-red-400">3. Sơ Đồ & Lịch Thi Đấu</h2>
-                <button onclick="startTournament()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-bold">ADMIN: Bắt đầu Giải</button>
+                <button id="adminStartBtn" onclick="startTournament()" class="hidden bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-bold transition">
+                    ADMIN: Bắt đầu Giải
+                </button>
             </div>
             <div id="bracketView" class="grid md:grid-cols-3 gap-4">
                 <p class="text-gray-500 text-sm">Chưa có trận đấu nào được khởi tạo.</p>
@@ -59,7 +62,7 @@
         <!-- BAN / PICK MAP AREA -->
         <div id="pickBanSection" class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
             <h2 class="text-lg font-bold text-yellow-400">4. VCT Pick / Ban Map Phase</h2>
-            <p class="text-sm text-gray-400">Hệ thống Cấm/Chọn Map dành cho các Đội đang thi đấu:</p>
+            <p class="text-sm text-gray-400">Chọn thao tác Ban Map dành cho Trận đấu hiện tại:</p>
             <div id="mapPoolButtons" class="flex flex-wrap gap-3"></div>
         </div>
 
@@ -72,16 +75,25 @@
         async function register() {
             const u = document.getElementById('authUsername').value;
             const p = document.getElementById('authPassword').value;
-            const res = await fetch('/api/register', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: u, password: p }) });
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: u, password: p })
+            });
             const data = await res.json();
             if (data.error) return alert(data.error);
+            alert("Đăng ký thành công!");
             setUser(data.user);
         }
 
         async function login() {
             const u = document.getElementById('authUsername').value;
             const p = document.getElementById('authPassword').value;
-            const res = await fetch('/api/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username: u, password: p }) });
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: u, password: p })
+            });
             const data = await res.json();
             if (data.error) return alert(data.error);
             setUser(data.user);
@@ -89,17 +101,28 @@
 
         function setUser(user) {
             currentUser = user;
-            document.getElementById('userStatus').innerText = `Đã đăng nhập: ${user.username}`;
+            document.getElementById('userStatus').innerText = `Đã đăng nhập: ${user.username} (${user.role || 'USER'})`;
             document.getElementById('tokenDisplay').innerText = user.token;
             document.getElementById('tokenCard').classList.remove('hidden');
+
+            if (user.role === 'ADMIN') {
+                document.getElementById('adminStartBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('adminStartBtn').classList.add('hidden');
+            }
+
             loadDashboard();
         }
 
         async function createTeam() {
-            if(!currentUser) return alert("Vui lòng đăng nhập!");
+            if (!currentUser) return alert("Vui lòng đăng nhập trước!");
             const name = document.getElementById('teamName').value;
             const pass = document.getElementById('teamPass').value;
-            const res = await fetch('/api/team/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass }) });
+            const res = await fetch('/api/team/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass })
+            });
             const data = await res.json();
             if (data.error) return alert(data.error);
             alert("Tạo Team thành công!");
@@ -107,20 +130,30 @@
         }
 
         async function joinTeam() {
-            if(!currentUser) return alert("Vui lòng đăng nhập!");
+            if (!currentUser) return alert("Vui lòng đăng nhập trước!");
             const name = document.getElementById('teamName').value;
             const pass = document.getElementById('teamPass').value;
-            const res = await fetch('/api/team/join', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass }) });
+            const res = await fetch('/api/team/join', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ userId: currentUser.id, teamName: name, teamPassword: pass })
+            });
             const data = await res.json();
             if (data.error) return alert(data.error);
-            alert("Đã tham gia Team!");
+            alert("Đã gia nhập Team!");
             loadDashboard();
         }
 
         async function startTournament() {
-            const res = await fetch('/api/admin/start-tournament', { method: 'POST' });
+            if (!currentUser || currentUser.role !== 'ADMIN') return alert("Chỉ Admin mới có quyền thực hiện!");
+            const res = await fetch('/api/admin/start-tournament', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ userId: currentUser.id })
+            });
             const data = await res.json();
             if (data.error) return alert(data.error);
+            alert("Giải đấu đã được khởi tạo!");
             loadDashboard();
         }
 
@@ -129,8 +162,8 @@
             const data = await res.json();
             
             const bracket = document.getElementById('bracketView');
-            if (data.matches.length === 0) {
-                bracket.innerHTML = `<p class="text-gray-500 text-sm">Chưa có trận đấu.</p>`;
+            if (!data.matches || data.matches.length === 0) {
+                bracket.innerHTML = `<p class="text-gray-500 text-sm">Chưa có trận đấu nào.</p>`;
                 return;
             }
 
@@ -142,23 +175,43 @@
                     </div>
                     <div class="text-base font-bold text-white mb-2">${m.teamA.name} <span class="text-yellow-400">VS</span> ${m.teamB.name}</div>
                     <div class="text-xs text-gray-400 space-y-1">
-                        <p>Map Pick A: <b class="text-white">${m.pickedMapA || 'Chưa chọn'}</b></p>
-                        <p>Map Pick B: <b class="text-white">${m.pickedMapB || 'Chưa chọn'}</b></p>
-                        <p>Decider Map: <b class="text-yellow-400">${m.deciderMap || 'Chưa quay'}</b></p>
+                        <p>Maps Cấm: <b class="text-red-400">${m.bannedMaps.join(', ') || 'Chưa cấm'}</b></p>
+                        <p>Decider Map: <b class="text-yellow-400">${m.deciderMap || 'Chưa chốt'}</b></p>
                     </div>
                 </div>
             `).join('');
 
-            renderPickBan();
+            renderPickBan(data.matches[0]);
         }
 
-        function renderPickBan() {
+        function renderPickBan(activeMatch) {
             const container = document.getElementById('mapPoolButtons');
-            container.innerHTML = mapPool.map(m => `
-                <button onclick="banMap('${m}')" class="bg-gray-800 hover:bg-red-600 border border-gray-700 px-4 py-2 rounded text-sm font-bold">
-                    Cấm ${m}
-                </button>
-            `).join('');
+            if (!activeMatch) {
+                container.innerHTML = `<p class="text-xs text-gray-500">Cần bắt đầu giải đấu để Pick/Ban.</p>`;
+                return;
+            }
+
+            container.innerHTML = mapPool.map(m => {
+                const isBanned = activeMatch.bannedMaps.includes(m);
+                return `
+                    <button onclick="banMap('${activeMatch.id}', '${m}')" 
+                        ${isBanned ? 'disabled' : ''} 
+                        class="${isBanned ? 'bg-gray-800 text-gray-600 border-gray-800 cursor-not-allowed' : 'bg-gray-800 hover:bg-red-600 text-white border-gray-700'} border px-4 py-2 rounded text-sm font-bold transition">
+                        ${isBanned ? 'Đã Cấm: ' + m : 'Cấm ' + m}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        async function banMap(matchId, mapName) {
+            const res = await fetch('/api/match/pickban', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ matchId, action: 'ban', mapName })
+            });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+            loadDashboard();
         }
 
         setInterval(loadDashboard, 5000);
