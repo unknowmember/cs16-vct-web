@@ -1,222 +1,223 @@
 const express = require('express');
-const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-const mongoose = require('mongoose');
-
+const path = require('path');
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
-app.use(cors());
-app.use(express.static('public'));
+app.use(express.static(__dirname));
 
-const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://admin:XxyYZzz1243123@cluster0.brqqwja.mongodb.net/?appName=Cluster0";
-
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("MongoDB Connected Successfully!"))
-  .catch(err => console.log("MongoDB Connection Error:", err.message));
-
-// Schemas
-const UserSchema = new mongoose.Schema({
-    id: String, username: String, password: String, role: String, teamId: String, token: String
-});
-const TeamSchema = new mongoose.Schema({
-    id: String, name: String, password: String, leaderId: String, members: [String], wins: { type: Number, default: 0 }
-});
-const MatchSchema = new mongoose.Schema({
-    id: String, round: Number,
-    teamA: Object, teamB: Object,
-    status: String,
-    bo3Maps: Array,
-    scoreA: { type: Number, default: 0 },
-    scoreB: { type: Number, default: 0 }
-});
-
-const User = mongoose.model('User', UserSchema);
-const Team = mongoose.model('Team', TeamSchema);
-const Match = mongoose.model('Match', MatchSchema);
-
+// Map Pool chuẩn CS 1.6
 const MAP_POOL = ["de_dust2", "de_inferno", "de_nuke", "de_train", "de_aztec", "de_cbble", "de_prodigy"];
 
-async function initAdmin() {
-    const adminExists = await User.findOne({ username: 'admin' });
-    if (!adminExists) {
-        await User.create({
-            id: 'ADMIN_001', username: 'admin',
-            password: bcrypt.hashSync('Hoangh@171112', 10),
-            role: 'ADMIN', teamId: null,
-            token: crypto.randomBytes(10).toString('hex').toUpperCase()
-        });
+// Lưu trữ dữ liệu trong bộ nhớ (In-Memory Data)
+// Mặc định khởi tạo 1 tài khoản ADMIN (tk: admin / mk: 123) để kiểm thử
+let users = [
+    { 
+        id: 'usr_admin', 
+        username: 'admin', 
+        password: '123', 
+        role: 'ADMIN', 
+        token: 'ADMIN_TOKEN_VCT_999', 
+        teamId: null 
     }
-}
-initAdmin();
+];
+let teams = [];
+let matches = [];
 
-// AUTH
-app.post('/api/register', async (req, res) => {
+// Các hàm tiện ích tra cứu
+const findUser = (id) => users.find(u => u.id === id);
+const findTeam = (id) => teams.find(t => t.id === id);
+const findMatch = (id) => matches.find(m => m.id === id);
+
+// =========================================================================
+// 1. API ĐĂNG NHẬP & ĐĂNG KÝ
+// =========================================================================
+app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
-    if (await User.findOne({ username })) return res.status(400).json({ error: "Tài khoản đã tồn tại!" });
-
-    const user = await User.create({
-        id: Date.now().toString(), username,
-        password: await bcrypt.hash(password, 10),
-        role: 'USER', teamId: null,
-        token: crypto.randomBytes(10).toString('hex').toUpperCase()
-    });
-    res.json({ success: true, user: { id: user.id, username: user.username, role: user.role, token: user.token, teamId: null } });
+    const user = users.find(u => u.username === username && u.password === password);
+    if (!user) return res.status(400).json({ error: 'Tài khoản hoặc mật khẩu không chính xác!' });
+    res.json({ user });
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
-    const user = await User.findOne({ username });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res.status(400).json({ error: "Sai tài khoản hoặc mật khẩu!" });
-    }
-    res.json({ success: true, user: { id: user.id, username: user.username, role: user.role, token: user.token, teamId: user.teamId } });
+    if (!username || !password) return res.status(400).json({ error: 'Vui lòng điền đầy đủ tên và mật khẩu!' });
+    if (users.find(u => u.username === username)) return res.status(400).json({ error: 'Tên tài khoản đã tồn tại!' });
+
+    const newUser = {
+        id: 'usr_' + Date.now(),
+        username,
+        password,
+        role: 'PLAYER',
+        token: 'TK_' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+        teamId: null
+    };
+    users.push(newUser);
+    res.json({ user: newUser });
 });
 
-// TEAMS
-app.get('/api/teams', async (req, res) => {
-    const teams = await Team.find();
-    const users = await User.find();
-    const result = teams.map(t => ({
-        id: t.id, name: t.name, leaderId: t.leaderId, wins: t.wins,
-        members: users.filter(u => u.teamId === t.id).map(u => ({ id: u.id, username: u.username, isLeader: u.id === t.leaderId }))
-    }));
-    res.json(result);
-});
-
-app.post('/api/team/create', async (req, res) => {
+// =========================================================================
+// 2. API QUẢN LÝ ĐỘI (TEAM CREATION & JOIN)
+// =========================================================================
+app.post('/api/team/create', (req, res) => {
     const { userId, teamName, teamPassword } = req.body;
-    const user = await User.findOne({ id: userId });
-    if (!user || user.teamId) return res.status(400).json({ error: "Tài khoản đã có team!" });
+    const user = findUser(userId);
+    if (!user) return res.status(400).json({ error: 'Tài khoản không tồn tại!' });
+    if (user.teamId) return res.status(400).json({ error: 'Bạn đã ở trong một đội khác rồi!' });
+    if (teams.find(t => t.name === teamName)) return res.status(400).json({ error: 'Tên đội này đã được đăng ký!' });
 
-    const team = await Team.create({
-        id: 'TEAM_' + Date.now(), name: teamName,
-        password: await bcrypt.hash(teamPassword, 10),
-        leaderId: user.id, // Đội trưởng là người tạo
-        members: [user.id]
-    });
+    const newTeam = {
+        id: 'team_' + Date.now(),
+        name: teamName,
+        password: teamPassword,
+        leaderId: user.id, // Đặt tài khoản tạo đội làm Đội Trưởng
+        members: [{ userId: user.id, username: user.username, isLeader: true }]
+    };
 
-    user.teamId = team.id;
-    await user.save();
-    res.json({ success: true, team });
+    teams.push(newTeam);
+    user.teamId = newTeam.id;
+    res.json({ team: newTeam });
 });
 
-app.post('/api/team/join', async (req, res) => {
+app.post('/api/team/join', (req, res) => {
     const { userId, teamName, teamPassword } = req.body;
-    const user = await User.findOne({ id: userId });
-    const team = await Team.findOne({ name: teamName });
+    const user = findUser(userId);
+    if (!user) return res.status(400).json({ error: 'Tài khoản không tồn tại!' });
+    if (user.teamId) return res.status(400).json({ error: 'Bạn đã ở trong một đội khác rồi!' });
 
-    if (!user || !team || !(await bcrypt.compare(teamPassword, team.password))) {
-        return res.status(400).json({ error: "Thông tin sai!" });
-    }
+    const team = teams.find(t => t.name === teamName && t.password === teamPassword);
+    if (!team) return res.status(400).json({ error: 'Tên đội hoặc mật khẩu đội không đúng!' });
 
+    team.members.push({ userId: user.id, username: user.username, isLeader: false });
     user.teamId = team.id;
-    if (!team.members.includes(user.id)) team.members.push(user.id);
-    await user.save();
-    await team.save();
-    res.json({ success: true, team });
+    res.json({ team });
 });
 
-// MATCH & DASHBOARD
-app.get('/api/dashboard', async (req, res) => {
-    const matches = await Match.find();
-    const teams = await Team.find();
-    res.json({ matches, teams });
+app.get('/api/teams', (req, res) => {
+    res.json(teams);
 });
 
-app.post('/api/admin/setup-bracket', async (req, res) => {
-    const { userId, pairings } = req.body;
-    const user = await User.findOne({ id: userId });
-    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin có quyền!' });
+// =========================================================================
+// 3. API ADMIN QUẢN TRỊ & XẾP CẶP BRACKET
+// =========================================================================
+app.post('/api/admin/delete-team', (req, res) => {
+    const { userId, teamId } = req.body;
+    const user = findUser(userId);
+    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Quyền truy cập bị từ chối: Chỉ dành cho Admin!' });
 
-    await Match.deleteMany({});
+    teams = teams.filter(t => t.id !== teamId);
+    users.forEach(u => { if (u.teamId === teamId) u.teamId = null; });
+    matches = matches.filter(m => m.teamA?.id !== teamId && m.teamB?.id !== teamId);
 
-    const teams = await Team.find();
-    const newMatches = [];
-
-    for (let idx = 0; idx < pairings.length; idx++) {
-        const pair = pairings[idx];
-        const teamA = teams.find(t => t.id === pair.teamAId) || { id: 'BYE_A', name: 'BYE' };
-        const teamB = teams.find(t => t.id === pair.teamBId) || { id: 'BYE_B', name: 'BYE' };
-
-        newMatches.push({
-            id: `M${idx + 1}`, round: 1,
-            teamA, teamB,
-            status: 'WAITING',
-            bo3Maps: [], scoreA: 0, scoreB: 0
-        });
-    }
-
-    await Match.insertMany(newMatches);
     res.json({ success: true });
 });
 
-app.post('/api/admin/start-match', async (req, res) => {
-    const { userId, matchId } = req.body;
-    const user = await User.findOne({ id: userId });
-    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin!' });
+app.post('/api/admin/setup-bracket', (req, res) => {
+    const { userId, pairings } = req.body;
+    const user = findUser(userId);
+    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Quyền truy cập bị từ chối: Chỉ dành cho Admin!' });
 
-    const match = await Match.findOne({ id: matchId });
-    if (!match) return res.status(404).json({ error: "Trận không tồn tại!" });
+    matches = pairings.map((p, index) => {
+        const teamA = findTeam(p.teamAId);
+        const teamB = findTeam(p.teamBId);
+        return {
+            id: 'match_' + (index + 1),
+            teamA: teamA ? { id: teamA.id, name: teamA.name } : null,
+            teamB: teamB ? { id: teamB.id, name: teamB.name } : null,
+            scoreA: 0,
+            scoreB: 0,
+            status: 'WAITING', // Các trạng thái: WAITING -> PICKING_MAP1 -> PICKING_MAP2 -> READY
+            bo3Maps: []
+        };
+    });
+
+    res.json({ matches });
+});
+
+app.post('/api/admin/start-match', (req, res) => {
+    const { userId, matchId } = req.body;
+    const user = findUser(userId);
+    if (!user || user.role !== 'ADMIN') return res.status(403).json({ error: 'Quyền truy cập bị từ chối: Chỉ dành cho Admin!' });
+
+    const match = findMatch(matchId);
+    if (!match) return res.status(404).json({ error: 'Không tìm thấy trận đấu!' });
 
     match.status = 'PICKING_MAP1';
-    await match.save();
-    res.json({ success: true, match });
+    res.json({ match });
 });
 
-// CHECK ĐỘI TRƯỞNG KHI PICK MAP 1
-app.post('/api/match/pick-map1', async (req, res) => {
+// =========================================================================
+// 4. API TRUY VẤN DASHBOARD TỔNG QUAN
+// =========================================================================
+app.get('/api/dashboard', (req, res) => {
+    res.json({ matches, teams });
+});
+
+// =========================================================================
+// 5. API PICK/BAN MAP (XỬ LÝ ĐÚNG CHẶT CHẼ LOGIC ĐỘI TRƯỞNG & THÀNH VIÊN)
+// =========================================================================
+
+// Đội Trưởng Team A Pick Map 1 & Chọn Phe
+app.post('/api/match/pick-map1', (req, res) => {
     const { userId, matchId, map1, sideA1 } = req.body;
-    const user = await User.findOne({ id: userId });
-    const match = await Match.findOne({ id: matchId });
-    const teamA = await Team.findOne({ id: match.teamA.id });
+    const match = findMatch(matchId);
+    if (!match) return res.status(404).json({ error: 'Trận đấu không tồn tại!' });
 
-    if (!user || !teamA) return res.status(403).json({ error: "Lỗi người dùng!" });
-    if (teamA.leaderId !== user.id) return res.status(403).json({ error: "Chỉ ĐỘI TRƯỞNG của Team A mới có quyền Pick Map!" });
-    if (match.status !== 'PICKING_MAP1') return res.status(400).json({ error: "Chưa tới lượt chọn Map 1!" });
+    const teamA = findTeam(match.teamA.id);
+    if (!teamA || teamA.leaderId !== userId) {
+        return res.status(403).json({ error: 'Chỉ Đội Trưởng của Team A mới có quyền thực hiện lượt Pick Map 1!' });
+    }
 
-    match.bo3Maps = [{
-        mapIndex: 1, name: map1, picker: match.teamA.name,
-        sideA: sideA1, sideB: sideA1 === 'CT' ? 'TERRORIST' : 'CT'
-    }];
+    // Tự động phân định phe ngược lại cho Team B
+    const sideB1 = sideA1 === 'CT' ? 'TERRORIST' : 'CT';
+
+    match.bo3Maps = [
+        { name: map1, pickedBy: match.teamA.id, sideA: sideA1, sideB: sideB1 }
+    ];
     match.status = 'PICKING_MAP2';
-    await match.save();
-    res.json({ success: true, match });
+
+    res.json({ match });
 });
 
-// CHECK ĐỘI TRƯỞNG KHI PICK MAP 2
-app.post('/api/match/pick-map2', async (req, res) => {
+// Đội Trưởng Team B Pick Map 2 & Tự động sinh Decider Map 3
+app.post('/api/match/pick-map2', (req, res) => {
     const { userId, matchId, map2, sideB2 } = req.body;
-    const user = await User.findOne({ id: userId });
-    const match = await Match.findOne({ id: matchId });
-    const teamB = await Team.findOne({ id: match.teamB.id });
+    const match = findMatch(matchId);
+    if (!match) return res.status(404).json({ error: 'Trận đấu không tồn tại!' });
 
-    if (!user || !teamB) return res.status(403).json({ error: "Lỗi người dùng!" });
-    if (teamB.leaderId !== user.id) return res.status(403).json({ error: "Chỉ ĐỘI TRƯỞNG của Team B mới có quyền Pick Map!" });
-    if (match.status !== 'PICKING_MAP2') return res.status(400).json({ error: "Chưa tới lượt chọn Map 2!" });
+    const teamB = findTeam(match.teamB.id);
+    if (!teamB || teamB.leaderId !== userId) {
+        return res.status(403).json({ error: 'Chỉ Đội Trưởng của Team B mới có quyền thực hiện lượt Pick Map 2!' });
+    }
 
-    const map1Name = match.bo3Maps[0].name;
-    if (map1Name === map2) return res.status(400).json({ error: "Map 2 không được trùng với Map 1!" });
+    const sideA2 = sideB2 === 'CT' ? 'TERRORIST' : 'CT';
+    const map1Name = match.bo3Maps[0]?.name;
 
-    const map2Info = {
-        mapIndex: 2, name: map2, picker: match.teamB.name,
-        sideA: sideB2 === 'CT' ? 'TERRORIST' : 'CT', sideB: sideB2
-    };
-
+    // Lấy danh sách map còn lại chưa được pick
     const remainingMaps = MAP_POOL.filter(m => m !== map1Name && m !== map2);
-    const deciderMapName = remainingMaps[Math.floor(Math.random() * remainingMaps.length)];
-    const sideA3 = Math.random() < 0.5 ? 'CT' : 'TERRORIST';
+    
+    // Ngẫu nhiên chọn 1 map làm Decider Map 3
+    const deciderMapName = remainingMaps[Math.floor(Math.random() * remainingMaps.length)] || 'de_dust2';
 
-    const map3Info = {
-        mapIndex: 3, name: deciderMapName, picker: "DECIDER (Random)",
-        sideA: sideA3, sideB: sideA3 === 'CT' ? 'TERRORIST' : 'CT'
-    };
+    match.bo3Maps.push({ name: map2, pickedBy: match.teamB.id, sideA: sideA2, sideB: sideB2 });
+    
+    // Decider Map 3 mặc định ngẫu nhiên/cố định chia phe chuẩn
+    match.bo3Maps.push({ name: deciderMapName, pickedBy: 'DECIDER', sideA: 'CT', sideB: 'TERRORIST' });
 
-    match.bo3Maps.push(map2Info, map3Info);
-    match.status = 'READY';
-    await match.save();
-    res.json({ success: true, match });
+    match.status = 'READY'; // Đã chọn xong 3 Map, sẵn sàng thi đấu
+
+    res.json({ match });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`VCT BO3 Server running on port ${PORT}`));
+// Route chính trả về giao diện HTML
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Khởi chạy Server
+app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(` VCT CS 1.6 SERVER DANG CHAY TAI: http://localhost:${PORT}`);
+    console.log(` Tai khoan Admin mac dinh: admin / Mat khau: 123`);
+    console.log(`====================================================`);
+});
