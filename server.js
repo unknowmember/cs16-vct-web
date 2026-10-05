@@ -17,7 +17,7 @@ const db = {
 };
 
 // Tạo sẵn tài khoản Admin mặc định: admin / admin123
-const adminPasswordHash = bcrypt.hashSync('admin123', 10);
+const adminPasswordHash = bcrypt.hashSync('Hoangh@171112', 10);
 db.users.push({
     id: 'ADMIN_001',
     username: 'admin',
